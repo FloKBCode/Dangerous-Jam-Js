@@ -1,0 +1,1 @@
+/* Global styles for the game — layout, background and canvas rendering */

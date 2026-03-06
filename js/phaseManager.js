@@ -1,0 +1,1 @@
+// PhaseManager class — controls the 3 narrative phases and their rules

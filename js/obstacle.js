@@ -1,0 +1,1 @@
+// Obstacle class — defines obstacle types, behaviors and spawn logic

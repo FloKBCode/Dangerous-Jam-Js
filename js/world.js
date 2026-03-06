@@ -1,0 +1,1 @@
+// World class — manages scrolling ground and background per phase

@@ -1,0 +1,1 @@
+// UI class — renders score, health bar, phase messages and game over screen
