@@ -1,1 +1,131 @@
-/* Global styles for the game — layout, background and canvas rendering */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  font-family: 'Press Start 2P', monospace;
+}
+
+#game-container {
+  position: relative;
+  width: 800px;
+  height: 400px;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  border: 2px solid #333;
+  box-shadow: 0 0 30px rgba(80, 80, 80, 0.4);
+}
+
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+}
+
+.glitch {
+  animation: glitch 0.3s steps(1) infinite;
+}
+
+@keyframes glitch {
+  0%   { clip-path: inset(0 0 90% 0); transform: translate(-3px, 0); }
+  20%  { clip-path: inset(30% 0 50% 0); transform: translate(3px, 0); }
+  40%  { clip-path: inset(60% 0 20% 0); transform: translate(-2px, 0); }
+  60%  { clip-path: inset(80% 0 5% 0); transform: translate(2px, 0); }
+  80%  { clip-path: inset(10% 0 70% 0); transform: translate(-1px, 0); }
+  100% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+}
+
+.pulse {
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.85; }
+}
+
+.vignette {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+  pointer-events: none;
+}
+
+#game-over {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #000;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+}
+
+#game-over.active {
+  display: flex;
+}
+
+#game-over .spotlight {
+  width: 6px;
+  height: 60%;
+  background: linear-gradient(to bottom, #fff, transparent);
+  margin-bottom: 12px;
+  animation: spotlight-drop 1.2s ease-out forwards;
+}
+
+@keyframes spotlight-drop {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+#game-over .stats {
+  font-size: 7px;
+  line-height: 2.2;
+  color: #ccc;
+  text-align: center;
+  margin-top: 20px;
+  animation: fade-in 1s ease-out 1.5s forwards;
+  opacity: 0;
+}
+
+@keyframes fade-in {
+  to { opacity: 1; }
+}
+
+@media (max-width: 860px) {
+  #game-container {
+    width: 100vw;
+    height: 50vw;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+  }
+}
