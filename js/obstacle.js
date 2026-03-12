@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 class Obstacle {
   constructor(x, type, phase) {
     this.x = x;
@@ -77,5 +76,3 @@ function spawnObstacle(phase) {
   const randomType = types[Math.floor(Math.random() * types.length)];
   return new Obstacle(800, randomType, phase);
 }
-=======
->>>>>>> Stashed changes
