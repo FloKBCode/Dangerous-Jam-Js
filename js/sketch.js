@@ -2,7 +2,13 @@
 
 // Main P5.js file — contains setup() and draw(), the core game loop
 
+let spritesheet;
 let player;
+
+function preload() {
+  spritesheet = loadImage('assets/sprites/player/tilemap-characters.png');
+}
+
 
 function setup() {
   createCanvas(800, 400);
