@@ -2,12 +2,15 @@
 
 // Main P5.js file — contains setup() and draw(), the core game loop
 
-let spritesheet;
-let player;
+let tileSheet, characterSheet, diamondGood, diamondBad;
 
 function preload() {
-  spritesheet = loadImage('assets/sprites/player/tilemap-characters.png');
-  deadImg     = loadImage('assets/sprites/player/player_dead.png');
+  spritesheet  = loadImage('assets/sprites/player/tilemap-characters.png');
+  deadImg      = loadImage('assets/sprites/player/player_dead.png');
+  tileSheet    = loadImage('assets/sprites/obstacles/tilemap.png');
+  characterSheet = loadImage('assets/sprites/player/tilemap-characters.png');
+  diamondGood  = loadImage('assets/sprites/obstacles/diamond_good.png');
+  diamondBad   = loadImage('assets/sprites/obstacles/diamond_bad.png');
 }
 
 
