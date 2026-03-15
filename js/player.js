@@ -39,9 +39,13 @@ class Player {
 
   display() {
     // tile size 24px + 1px spacing = step of 25px
-    // col 0 = run | col 1 = jump (reused for crouch)
+    // col 0 = run | col 1 = jump (reused for crouch) | deadImg = separate file
 
-    if (this.isCrouching) {
+    if (this.isDead) {
+      // dead sprite — separate PNG created on Piskel (24x24px)
+      image(deadImg, this.x, this.y, 32, 32);
+
+    } else if (this.isCrouching) {
       // reuse jump sprite (col 1) — player stays on the ground
       image(spritesheet,
         this.x, this.y, 32, 32,

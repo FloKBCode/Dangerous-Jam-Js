@@ -7,6 +7,7 @@ let player;
 
 function preload() {
   spritesheet = loadImage('assets/sprites/player/tilemap-characters.png');
+  deadImg     = loadImage('assets/sprites/player/player_dead.png');
 }
 
 
