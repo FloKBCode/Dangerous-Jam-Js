@@ -1,78 +1,123 @@
+// Obstacle class — defines obstacle types, behaviors, spawn logic and effects per phase
+
 class Obstacle {
-  constructor(x, type, phase) {
+  constructor(type, x) {
+    this.type = type;
     this.x = x;
-    this.type = type; // "coin", "spike", "cross", "barrier_high", "barrier_low"
-    this.phase = phase;
-    this.width = 16;
-    this.height = 16;
+    this.width = 18;
+    this.height = 18;
     this.y = this.getYPosition();
+
+    // flying enemy animation
+    this.frame = 0;
+    this.frameTimer = 0;
+    this.frameInterval = 10; // change frame every 10 ticks
   }
 
-  // Set vertical position based on obstacle type
+  // set vertical position based on obstacle type
   getYPosition() {
-    if (this.type === "barrier_high") return 200; // player must crouch
-    if (this.type === "barrier_low") return 320;  // player must jump
-    return 320; // ground level for others
+    if (this.type === "barrier_high") return 260; // player must crouch
+    return 302;                                    // ground level for all others
   }
 
-  // Move obstacle from right to left
+  // move obstacle from right to left
   update(speed) {
     this.x -= speed;
+
+    // animate flying enemy wings
+    if (this.type === "barrier_high") {
+      this.frameTimer++;
+      if (this.frameTimer >= this.frameInterval) {
+        this.frame = (this.frame + 1) % 3; // 3 frames : 0, 1, 2
+        this.frameTimer = 0;
+      }
+    }
   }
 
-  // Draw obstacle on canvas
-  draw() {
-    push();
-    fill(this.getColor());
-    noStroke();
-    rect(this.x, this.y, this.width, this.height);
-    pop();
+  // draw obstacle using spritesheet coordinates
+  draw(tileSheet, characterSheet, diamondGood, diamondBad) {
+    // tilemap step    = 19px (18px tile + 1px spacing)
+    // character step  = 25px (24px tile + 1px spacing)
+
+    if (this.type === "coin") {
+      // coin — c11 r7 in tilemap.png
+      image(tileSheet, this.x, this.y, 18, 18,
+        11 * 19, 7 * 19, 18, 18);
+
+    } else if (this.type === "spike") {
+      // spike — c8 r3 in tilemap.png
+      image(tileSheet, this.x, this.y, 18, 18,
+        8 * 19, 3 * 19, 18, 18);
+
+    } else if (this.type === "barrier_low") {
+      // low barrier — c6 r5 in tilemap.png
+      image(tileSheet, this.x, this.y, 18, 18,
+        6 * 19, 5 * 19, 18, 18);
+
+    } else if (this.type === "barrier_high") {
+      // flying enemy — animated — c6/c7/c8 r2 in tilemap-characters.png
+      // frame 0 = wings up (c6), frame 1 = wings mid (c7), frame 2 = wings down (c8)
+      let col = 6 + this.frame;
+      image(characterSheet, this.x, this.y, 32, 32,
+        col * 25, 2 * 25, 24, 24);
+
+    } else if (this.type === "diamond_good") {
+      // good diamond — separate Piskel file
+      image(diamondGood, this.x, this.y, 18, 18);
+
+    } else if (this.type === "diamond_bad") {
+      // bad diamond — separate Piskel file, phase 3 only
+      image(diamondBad, this.x, this.y, 18, 18);
+    }
   }
 
-  // Get color based on type
-  getColor() {
-    const colors = {
-      coin: "#FFF176",
-      spike: "#FF5252",
-      cross: "#69F0AE",
-      barrier_high: "#8D6E63",
-      barrier_low: "#8D6E63"
-    };
-    return colors[this.type] || "#FFFFFF";
-  }
-
-  // Return effect on player depending on active phase
+  // return HP and score effect based on active phase
   getEffect(phase) {
-    if (phase === 1) {
-      // Phase 1 - normal rules
-      if (this.type === "coin")         return { hp: 0,   score: 10 };
-      if (this.type === "spike")        return { hp: -20, score: 0 };
-      if (this.type === "cross")        return { hp: 20,  score: 0 };
-      if (this.type === "barrier_high") return { hp: -20, score: 0 };
-      if (this.type === "barrier_low")  return { hp: -20, score: 0 };
+    if (this.type === "coin") {
+      if (phase === 1) return { hp: 0,  score: 10 };
+      if (phase === 2) return { hp: -3, score: 0  };
+      if (phase === 3) return { hp: -3, score: 0  };
     }
-
-    if (phase === 2) {
-      // Phase 2 - rules are inverted
-      if (this.type === "coin")         return { hp: -20, score: 0 };
-      if (this.type === "spike")        return { hp: 20,  score: 0 };
-      if (this.type === "cross")        return { hp: 0,   score: 0 };
-      if (this.type === "barrier_high") return { hp: -20, score: 0 };
-      if (this.type === "barrier_low")  return { hp: -20, score: 0 };
+    if (this.type === "spike") {
+      if (phase === 1) return { hp: -3, score: 0 };
+      if (phase === 2) return { hp: 3,  score: 5 };
+      if (phase === 3) return { hp: -3, score: 0 };
     }
-
+    if (this.type === "diamond_good") {
+      if (phase === 1) return { hp: 3,  score: 0 };
+      if (phase === 2) return { hp: -3, score: 0 };
+      if (phase === 3) return { hp: 3,  score: 5 };
+    }
+    if (this.type === "diamond_bad") {
+      // only appears in phase 3
+      return { hp: -6, score: 0 };
+    }
+    if (this.type === "barrier_low" || this.type === "barrier_high") {
+      // barriers always deal damage in every phase
+      return { hp: -3, score: 0 };
+    }
     return { hp: 0, score: 0 };
   }
 
-  // Check if obstacle is off screen
+  // return true if obstacle has scrolled off screen
   isOffScreen() {
     return this.x + this.width < 0;
   }
 }
 
-// Randomly spawn a new obstacle based on current phase
+// randomly spawn an obstacle based on current phase
 function spawnObstacle(phase) {
-  const types = ["coin", "spike", "cross", "barrier_high", "barrier_low"];
+  let types;
+
+  if (phase === 1) {
+    types = ["coin", "spike", "diamond_good", "barrier_low", "barrier_high"];
+  } else if (phase === 2) {
+    types = ["coin", "spike", "diamond_good", "barrier_low", "barrier_high"];
+  } else {
+    // phase 3 — diamond_bad appears
+    types = ["coin", "spike", "diamond_good", "diamond_bad", "barrier_low", "barrier_high"];
+  }
+
   const randomType = types[Math.floor(Math.random() * types.length)];
-  return new Obstacle(800, randomType, phase);
+  return new Obstacle(randomType, 820);
 }
