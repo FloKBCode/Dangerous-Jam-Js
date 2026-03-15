@@ -2,10 +2,14 @@
 
 // Main P5.js file — contains setup() and draw(), the core game loop
 
+let player;
+
 function setup() {
   createCanvas(800, 400);
+  player = new Player();
 }
 
 function draw() {
   background(0);
+  player.display();
 }
