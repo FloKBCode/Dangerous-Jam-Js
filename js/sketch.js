@@ -11,6 +11,10 @@ function preload() {
   characterSheet = loadImage('assets/sprites/player/tilemap-characters.png');
   diamondGood  = loadImage('assets/sprites/obstacles/diamond_good.png');
   diamondBad   = loadImage('assets/sprites/obstacles/diamond_bad.png');
+  bgImg   = loadImage('assets/backgrounds/backgroundColorForest.png');
+  sunImg  = loadImage('assets/backgrounds/sun.png');
+  moonImg = loadImage('assets/backgrounds/moonFull.png');
+  hutImg  = loadImage('assets/backgrounds/hut.png');
 }
 
 

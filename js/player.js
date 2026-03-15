@@ -43,7 +43,12 @@ class Player {
 
     if (this.isDead) {
       // dead sprite — separate PNG created on Piskel (24x24px)
-      image(deadImg, this.x, this.y, 32, 32);
+      // rotate 90° to lay the player on the ground
+      push();
+      translate(this.x + 16, this.y + 16); // center of sprite
+      rotate(HALF_PI);                      // 90° clockwise
+      image(deadImg, -16, -16, 32, 32);
+      pop();
 
     } else if (this.isCrouching) {
       // reuse jump sprite (col 1) — player stays on the ground
