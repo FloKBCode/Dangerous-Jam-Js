@@ -6,7 +6,7 @@ class Player {
     this.y       = 302;
     this.width   = 32;
     this.height  = 32;
-    this.velocityY  = -7;
+    this.velocityY  = 0;
     this.gravity    = 0.6;
     this.groundY    = 290;
     this.isOnGround = false;
@@ -33,7 +33,7 @@ class Player {
 
     // jump — arrow up or space bar
     if ((keyIsDown(UP_ARROW) || keyIsDown(32)) && this.isOnGround && !this.isCrouching) {
-      this.velocityY = -9;
+      this.velocityY = -7;
       this.isOnGround = false;
     }
 
