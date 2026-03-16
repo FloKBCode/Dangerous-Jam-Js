@@ -75,4 +75,4 @@ js/ui.js — user interface
 - Mariame — Documentation
 
 ## Play Online
-[**Play TRUST NO ONE on itch.io**](https://itch.io/jam/dangerous-jam-js)
+[**Play TRUST NO ONE on itch.io**]https://itch.io/
