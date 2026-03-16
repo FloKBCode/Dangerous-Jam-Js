@@ -1,5 +1,9 @@
-// UI class — renders score, hearts, phase messages and game over screen
+// formatScore function — converts numbers to 6-digit zero-padded strings
+function formatScore(score) {
+  return score.toString().padStart(6, "0");
+}
 
+// UI class — renders score, hearts, phase messages and game over screen
 class UI {
   constructor() {
     this.score = 0;
@@ -48,15 +52,11 @@ class UI {
     textSize(10);
     fill(255, 255, 100);
     noStroke();
-    text("SCORE: " + nf(this.score, 6), 20, 25);
+    text("SCORE: " + formatScore(this.score), 20, 25);
     pop();
   }
 
   // draw 3 hearts based on current HP
-  // heart full  = c3 r2 in tilemap.png
-  // heart half  = c5 r2 in tilemap.png
-  // heart empty = c4 r2 in tilemap.png
-  // tilemap step = 19px (18px tile + 1px spacing)
   _drawHearts(hp, tileSheet) {
     const heartSize = 24;
     const startX = 20;
@@ -64,13 +64,13 @@ class UI {
     const gap = 28;
 
     for (let i = 0; i < 3; i++) {
-      const heartHP = hp - i * 3; // HP value for this heart slot
+      const heartHP = hp - i * 3;
 
       let col;
       if (heartHP >= 3) {
         col = 4; // full heart — c4 r2
       } else if (heartHP >= 1) {
-        col = 5; // half heart — c5 r2
+        col = 5;
       } else {
         col = 6; // empty heart — c6 r2
       }
@@ -89,14 +89,12 @@ class UI {
     textSize(9);
     textAlign(CENTER, CENTER);
 
-    // dark background behind text
     fill(0, 0, 0, this.messageAlpha * 0.7);
     noStroke();
     rectMode(CENTER);
     rect(width / 2, height / 2 - 40,
          textWidth(this.phaseMessage) + 40, 30, 4);
 
-    // message text
     fill(255, 255, 255, this.messageAlpha);
     text(this.phaseMessage, width / 2, height / 2 - 40);
     pop();
