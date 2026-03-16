@@ -4,6 +4,7 @@
 let spritesheet, deadImg;
 let tileSheet, characterSheet, diamondGood, diamondBad;
 let bgImg, sunImg, moonImg, hutImg;
+let soundJump, soundHurt, musicPhase1, musicPhase2, musicPhase3;
 
 // ── game objects ────────────────────────────────────────
 let player, world, ui, phaseManager, transition;
@@ -32,6 +33,11 @@ function preload() {
   sunImg         = loadImage('assets/backgrounds/sun.png');
   moonImg        = loadImage('assets/backgrounds/moonFull.png');
   hutImg         = loadImage('assets/backgrounds/hut.png');
+  soundJump   = loadSound('assets/sounds/jump.mp3');
+soundHurt   = loadSound('assets/sounds/hurt.mp3');
+musicPhase1 = loadSound('assets/sounds/phase1.mp3');
+musicPhase2 = loadSound('assets/sounds/phase2.mp3');
+musicPhase3 = loadSound('assets/sounds/phase3.mp3');
 }
 
 function setup() {
@@ -53,6 +59,10 @@ function _initGame() {
   hitFlash     = 0;
   healFlash    = 0;
   scorePopup   = 0;
+  if (musicPhase1 && !musicPhase1.isPlaying()) {
+  musicPhase1.setLoop(true);
+  musicPhase1.play();
+}
 }
 
 function draw() {
@@ -106,7 +116,7 @@ function draw() {
       let effect = obstacles[i].getEffect(phase);
       player.health += effect.hp;
       score         += effect.score;
-      if (effect.hp    < 0) hitFlash   = 20;
+      if (effect.hp < 0) { hitFlash = 20; soundHurt.play(); }
       if (effect.hp    > 0) healFlash  = 20;
       if (effect.score > 0) scorePopup = 40;
       obstacles.splice(i, 1);

@@ -35,6 +35,7 @@ class Player {
     if ((keyIsDown(UP_ARROW) || keyIsDown(32)) && this.isOnGround && !this.isCrouching) {
       this.velocityY = -7;
       this.isOnGround = false;
+      soundJump.play();
     }
 
     // crouch — arrow down or S key, only when on the ground

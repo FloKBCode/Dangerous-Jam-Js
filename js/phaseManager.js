@@ -77,8 +77,18 @@ class PhaseManager {
         this.cinematicState = "cinematic_black";
         this.cinematicTimer = 0;
         world.scrollSpeed   = 0;
-        if (this.pendingPhase === 2) ui.showMessage(this.phase2Message);
-        if (this.pendingPhase === 3) ui.showMessage(this.phase3Message);
+        if (this.pendingPhase === 2) {
+          ui.showMessage(this.phase2Message);
+          musicPhase1.stop();
+          musicPhase2.setLoop(true);
+          musicPhase2.play();
+        }
+        if (this.pendingPhase === 3) {
+          ui.showMessage(this.phase3Message);
+          musicPhase2.stop();
+          musicPhase3.setLoop(true);
+          musicPhase3.play();
+        }
       }
     }
 
