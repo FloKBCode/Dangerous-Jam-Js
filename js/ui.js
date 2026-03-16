@@ -68,11 +68,11 @@ class UI {
 
       let col;
       if (heartHP >= 3) {
-        col = 3; // full heart — c3 r2
+        col = 4; // full heart — c4 r2
       } else if (heartHP >= 1) {
         col = 5; // half heart — c5 r2
       } else {
-        col = 4; // empty heart — c4 r2
+        col = 6; // empty heart — c6 r2
       }
 
       image(tileSheet,

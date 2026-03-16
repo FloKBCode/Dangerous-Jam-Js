@@ -175,22 +175,32 @@ class World {
   // scrolling ground tiles
   // ground tile — find a grass tile in tilemap.png
   _drawGround(phase, tileSheet) {
-    // ground color shifts with phase
-    if (phase === 1) {
-      tint(255);
-    } else if (phase === 2) {
-      tint(80, 80, 120);
-    } else {
-      tint(160, 30, 30);
-    }
+  if (phase === 1) {
+    tint(255);
+  } else if (phase === 2) {
+    tint(80, 80, 120);
+  } else {
+    tint(160, 30, 30);
+  }
 
+  // first row — grass tile c0 r0
+  for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
+    image(tileSheet,
+      x, this.groundY, this.tileSize, this.tileSize,
+      2 * 19, 1 * 19, 18, 18
+    );
+  }
+
+  // fill the rest down to bottom of canvas — dirt tile c0 r6
+  for (let y = this.groundY + this.tileSize; y < height; y += this.tileSize) {
     for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
-      // grass tile — replace c0 r0 with your actual grass tile coordinates
       image(tileSheet,
-        x, this.groundY, this.tileSize, this.tileSize,
-        0 * 19, 0 * 19, 18, 18
+        x, y, this.tileSize, this.tileSize,
+        2 * 19, 6 * 19, 18, 18
       );
     }
-    noTint();
   }
+
+  noTint();
+}
 }
