@@ -16,7 +16,10 @@ The player must react quickly to obstacles and objects appearing in the world.
 ### Controls
 
 Jump: Arrow Up or Space  
-Crouch: Arrow Down or S
+Crouch: Arrow Down or S  
+Start Game: Enter  
+Pause/Resume: P  
+Restart after Game Over: R
 
 ### Objective
 
@@ -70,3 +73,6 @@ js/ui.js — user interface
 - Marly — Developer
 - Sarah — Developer
 - Mariame — Documentation
+
+## Play Online
+[**Play TRUST NO ONE on itch.io**](https://itch.io/jam/dangerous-jam-js)
