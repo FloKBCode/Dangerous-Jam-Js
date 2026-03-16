@@ -8,7 +8,7 @@ class Player {
     this.height = 32;
     this.velocityY = 0;
     this.gravity = 0.6;
-    this.groundY = 300;
+    this.groundY = 290;
     this.isOnGround = false;
     this.isCrouching = false;
     this.isDead = false;
