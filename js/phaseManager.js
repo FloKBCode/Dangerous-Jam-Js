@@ -49,13 +49,15 @@ class PhaseManager {
 
   // check AABB collision between player and obstacle
   checkCollision(player, obstacle) {
-    return (
-      player.x < obstacle.x + obstacle.width  &&
-      player.x + player.width  > obstacle.x   &&
-      player.y < obstacle.y + obstacle.height  &&
-      player.y + player.height > obstacle.y
-    );
-  }
+  // reduced hitbox — more forgiving collision detection
+  let margin = 8;
+  return (
+    player.x + margin < obstacle.x + obstacle.width  &&
+    player.x + player.width - margin > obstacle.x    &&
+    player.y + margin < obstacle.y + obstacle.height  &&
+    player.y + player.height - margin > obstacle.y
+  );
+}
 
   // score earned per frame based on current phase
   getScoreRate() {

@@ -14,6 +14,11 @@ let score = 0;
 let spawnTimer = 0;
 let spawnInterval = 90;
 
+// ── visual feedback ─────────────────────────────────────
+let hitFlash = 0;
+let healFlash = 0;
+let scorePopup = 0;
+
 function preload() {
   spritesheet    = loadImage('assets/sprites/player/tilemap-characters.png');
   deadImg        = loadImage('assets/sprites/player/player_dead.png');
@@ -61,6 +66,9 @@ function draw() {
       let effect = obstacles[i].getEffect(phase);
       player.health += effect.hp;
       score += effect.score;
+      if (effect.hp < 0)     hitFlash   = 20;
+      if (effect.hp > 0)     healFlash  = 20;
+      if (effect.score > 0)  scorePopup = 40;
       obstacles.splice(i, 1);
       continue;
     }
@@ -85,6 +93,34 @@ function draw() {
 
   // update phase
   phaseManager.update(player, world, transition, ui);
+
+  // red flash on damage
+  if (hitFlash > 0) {
+    noStroke();
+    fill(255, 0, 0, map(hitFlash, 0, 20, 0, 100));
+    rect(0, 0, width, height);
+    hitFlash--;
+  }
+
+  // green flash on heal
+  if (healFlash > 0) {
+    noStroke();
+    fill(0, 255, 100, map(healFlash, 0, 20, 0, 80));
+    rect(0, 0, width, height);
+    healFlash--;
+  }
+
+  // score popup
+  if (scorePopup > 0) {
+    push();
+    textFont("'Press Start 2P'");
+    textSize(14);
+    fill(255, 255, 0, map(scorePopup, 0, 40, 0, 255));
+    textAlign(CENTER);
+    text("+PTS", width / 2, height / 2 - scorePopup);
+    pop();
+    scorePopup--;
+  }
 
   // draw UI on top of everything
   ui.update(score);
