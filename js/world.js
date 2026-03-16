@@ -145,7 +145,7 @@ class World {
     for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
       image(tileSheet,
         x, this.groundY, this.tileSize, this.tileSize,
-        0 * 19, 0 * 19, 18, 18
+        2 * 19, 1 * 19, 18, 18
       );
     }
 
@@ -154,7 +154,7 @@ class World {
       for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
         image(tileSheet,
           x, y, this.tileSize, this.tileSize,
-          0 * 19, 6 * 19, 18, 18
+          2 * 19, 6 * 19, 18, 18
         );
       }
     }

@@ -49,13 +49,19 @@ class PhaseManager {
 
   // check AABB collision between player and obstacle
   checkCollision(player, obstacle) {
-  // reduced hitbox — more forgiving collision detection
-  let margin = 8;
+  // when crouching player height is reduced by half
+  let playerHeight = player.isCrouching ? player.height / 2 : player.height;
+  let playerY      = player.isCrouching ? player.y + player.height / 2 : player.y;
+
+  let ow = obstacle.type === "barrier_high" ? 32 : 18;
+  let oh = obstacle.type === "barrier_high" ? 32 : 18;
+  let margin = 6;
+
   return (
-    player.x + margin < obstacle.x + obstacle.width  &&
-    player.x + player.width - margin > obstacle.x    &&
-    player.y + margin < obstacle.y + obstacle.height  &&
-    player.y + player.height - margin > obstacle.y
+    player.x + margin < obstacle.x + ow             &&
+    player.x + player.width - margin > obstacle.x   &&
+    playerY + margin < obstacle.y + oh              &&
+    playerY + playerHeight - margin > obstacle.y
   );
 }
 

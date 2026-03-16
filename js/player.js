@@ -6,9 +6,9 @@ class Player {
     this.y       = 302;
     this.width   = 32;
     this.height  = 32;
-    this.velocityY  = 0;
+    this.velocityY  = -7;
     this.gravity    = 0.6;
-    this.groundY    = 302;
+    this.groundY    = 290;
     this.isOnGround = false;
     this.isCrouching = false;
     this.isDead  = false;
@@ -44,7 +44,7 @@ class Player {
     if (this.isOnGround && !this.isCrouching) {
       this.runTimer++;
       if (this.runTimer >= 8) {
-        this.runFrame = this.runFrame === 0 ? 2 : 0;
+        this.runFrame = this.runFrame === 0 ? 1 : 0;
         this.runTimer = 0;
       }
     }
