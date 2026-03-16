@@ -1,5 +1,3 @@
-// Player class — handles movement, jump, crouch, health and display
-
 class Player {
   constructor() {
     this.x = 100;
@@ -13,60 +11,58 @@ class Player {
     this.isCrouching = false;
     this.isDead = false;
     this.health = 100;
+    this.runFrame = 0;
+    this.frameTimer = 0;
   }
 
   update() {
-    // apply gravity
     this.velocityY += this.gravity;
     this.y += this.velocityY;
 
-    // prevent player from falling below the ground
     if (this.y >= this.groundY) {
       this.y = this.groundY;
       this.velocityY = 0;
       this.isOnGround = true;
     }
 
-    // jump — arrow up or space bar
     if ((keyIsDown(UP_ARROW) || keyIsDown(32)) && this.isOnGround && !this.isCrouching) {
       this.velocityY = -13;
       this.isOnGround = false;
     }
 
-    // crouch — arrow down or S key, only when on the ground
     this.isCrouching = (keyIsDown(DOWN_ARROW) || keyIsDown(83)) && this.isOnGround;
+
+    if (this.isOnGround && !this.isCrouching && !this.isDead) {
+      this.frameTimer++;
+      if (this.frameTimer >= 8) {
+        this.runFrame = this.runFrame === 0 ? 2 : 0;
+        this.frameTimer = 0;
+      }
+    }
   }
 
   display() {
-    // tile size 24px + 1px spacing = step of 25px
-    // col 0 = run | col 1 = jump (reused for crouch) | deadImg = separate file
-
     if (this.isDead) {
-      // dead sprite — separate PNG created on Piskel (24x24px)
-      // rotate 90° to lay the player on the ground
       push();
-      translate(this.x + 16, this.y + 16); // center of sprite
-      rotate(HALF_PI);                      // 90° clockwise
+      translate(this.x + 16, this.y + 16);
+      rotate(HALF_PI);
       image(deadImg, -16, -16, 32, 32);
       pop();
 
     } else if (this.isCrouching) {
-      // reuse jump sprite (col 1) — player stays on the ground
       image(spritesheet,
         this.x, this.y, 32, 32,
         1 * 25, 0 * 25, 24, 24
       );
     } else if (!this.isOnGround) {
-      // in the air — jump sprite (col 1)
       image(spritesheet,
         this.x, this.y, 32, 32,
         1 * 25, 0 * 25, 24, 24
       );
     } else {
-      // on the ground — run sprite (col 0)
       image(spritesheet,
         this.x, this.y, 32, 32,
-        0 * 25, 0 * 25, 24, 24
+        this.runFrame * 25, 0 * 25, 24, 24
       );
     }
   }
