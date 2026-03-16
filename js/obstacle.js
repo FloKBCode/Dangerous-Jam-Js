@@ -16,7 +16,7 @@ class Obstacle {
 
   // set vertical position based on obstacle type
   getYPosition() {
-    if (this.type === "barrier_high") return 260; // player must crouch
+    if (this.type === "barrier_high") return 268; // player must crouch
     return 302;                                    // ground level for all others
   }
 
