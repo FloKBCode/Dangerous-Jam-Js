@@ -25,7 +25,7 @@ function showPhaseLabel(phase) {
   phaseLabelTimer = 180;
 }
 
-// UI class — renders score, hearts, phase messages and game over screen
+// UI class — renders score, hearts, phase messages
 class UI {
   constructor() {
     this.score = 0;
