@@ -4,7 +4,8 @@
 let spritesheet, deadImg;
 let tileSheet, characterSheet, diamondGood, diamondBad;
 let bgImg, sunImg, moonImg, hutImg;
-let soundJump, soundHurt, musicPhase1, musicPhase2, musicPhase3;
+let soundJump, soundHurt, soundTransition, soundBreathing;
+let musicPhase1, musicPhase2, musicPhase3;
 
 // ── game objects ────────────────────────────────────────
 let player, world, ui, phaseManager, transition;
@@ -33,11 +34,13 @@ function preload() {
   sunImg         = loadImage('assets/backgrounds/sun.png');
   moonImg        = loadImage('assets/backgrounds/moonFull.png');
   hutImg         = loadImage('assets/backgrounds/hut.png');
-  soundJump   = loadSound('assets/sounds/jump.mp3');
-soundHurt   = loadSound('assets/sounds/hurt.mp3');
-musicPhase1 = loadSound('assets/sounds/phase1.mp3');
-musicPhase2 = loadSound('assets/sounds/phase2.mp3');
-musicPhase3 = loadSound('assets/sounds/phase3.mp3');
+  soundJump      = loadSound('assets/sounds/jump.mp3');
+  soundHurt      = loadSound('assets/sounds/hurt.mp3');
+  soundTransition = loadSound('assets/sounds/transition.mp3');
+  soundBreathing  = loadSound('assets/sounds/phase3_breathing.mp3');
+  musicPhase1    = loadSound('assets/sounds/phase1.mp3');
+  musicPhase2    = loadSound('assets/sounds/phase2.mp3');
+  musicPhase3    = loadSound('assets/sounds/phase3.mp3');
 }
 
 function setup() {
@@ -60,9 +63,9 @@ function _initGame() {
   healFlash    = 0;
   scorePopup   = 0;
   if (musicPhase1 && !musicPhase1.isPlaying()) {
-  musicPhase1.setLoop(true);
-  musicPhase1.play();
-}
+    musicPhase1.setLoop(true);
+    musicPhase1.play();
+  }
 }
 
 function draw() {
@@ -72,7 +75,6 @@ function draw() {
   }
 
   if (gameState === "paused") {
-    // keep world visible behind pause overlay
     world.draw(phaseManager.currentPhase, bgImg, sunImg, moonImg, hutImg, tileSheet);
     player.display();
     ui.draw(player.health, tileSheet);
@@ -89,15 +91,11 @@ function draw() {
   let phase = phaseManager.currentPhase;
   let isCinematic = phaseManager.isCinematic();
 
-  // update and draw world (stops during cinematic)
   world.update(phase);
   world.draw(phase, bgImg, sunImg, moonImg, hutImg, tileSheet);
 
-  // only spawn and move obstacles when not in cinematic
   if (!isCinematic) {
     spawnTimer++;
-
-    // spawn interval decreases with phase for more challenge
     let interval = phase === 1 ? 90 : phase === 2 ? 70 : 50;
     if (spawnTimer >= interval) {
       obstacles.push(spawnObstacle(phase));
@@ -105,12 +103,10 @@ function draw() {
     }
   }
 
-  // update and draw obstacles
   for (let i = obstacles.length - 1; i >= 0; i--) {
     if (!isCinematic) obstacles[i].update(world.scrollSpeed);
     obstacles[i].draw(tileSheet, characterSheet, diamondGood, diamondBad);
 
-    // check collision — disabled during cinematic
     if (!isCinematic && !player.isDead &&
         phaseManager.checkCollision(player, obstacles[i])) {
       let effect = obstacles[i].getEffect(phase);
@@ -126,23 +122,19 @@ function draw() {
     if (obstacles[i].isOffScreen()) obstacles.splice(i, 1);
   }
 
-  // update and draw player
   if (!player.isDead && !isCinematic) {
     player.update();
     score += phaseManager.getScoreRate();
   }
   player.display();
 
-  // check game over
   if (player.health <= 0 && !player.isDead) {
     player.isDead = true;
     setTimeout(() => { gameState = "gameover"; }, 1500);
   }
 
-  // update phase manager (handles cinematic transitions)
   phaseManager.update(player, world, transition, ui);
 
-  // draw cinematic black overlay
   let alpha = phaseManager.getCinematicAlpha();
   if (alpha > 0) {
     noStroke();
@@ -150,7 +142,6 @@ function draw() {
     rect(0, 0, width, height);
   }
 
-  // red flash on damage
   if (hitFlash > 0) {
     noStroke();
     fill(255, 0, 0, map(hitFlash, 0, 20, 0, 100));
@@ -158,7 +149,6 @@ function draw() {
     hitFlash--;
   }
 
-  // green flash on heal
   if (healFlash > 0) {
     noStroke();
     fill(0, 255, 100, map(healFlash, 0, 20, 0, 80));
@@ -166,7 +156,6 @@ function draw() {
     healFlash--;
   }
 
-  // score popup
   if (scorePopup > 0) {
     push();
     textFont("'Press Start 2P'");
@@ -178,19 +167,15 @@ function draw() {
     scorePopup--;
   }
 
-  // draw UI
   ui.update(score);
   ui.draw(player.health, tileSheet);
 
-  // draw transition overlay
   transition.update();
   transition.draw();
 
-  // draw phase label
   drawPhaseLabel();
 }
 
-// draw start screen
 function _drawStartScreen() {
   background(0);
   drawTitle();
@@ -205,21 +190,18 @@ function _drawStartScreen() {
   pop();
 }
 
-// draw game over screen
 function _drawGameOverScreen() {
   background(0);
   push();
   textFont("'Press Start 2P'");
   textAlign(CENTER, CENTER);
 
-  // spotlight beam
   noStroke();
   fill(255, 255, 255, 30);
   triangle(width/2 - 40, 0, width/2 + 40, 0, width/2, height * 0.55);
   fill(255, 255, 255, 60);
   triangle(width/2 - 15, 0, width/2 + 15, 0, width/2, height * 0.55);
 
-  // dead player sprite under spotlight
   if (deadImg) {
     push();
     translate(width / 2 + 16, height * 0.52 + 16);
@@ -228,43 +210,35 @@ function _drawGameOverScreen() {
     pop();
   }
 
-  // game over title
   textSize(18);
   fill(255, 60, 60);
   text("GAME OVER", width / 2, 60);
 
-  // stats
   textSize(8);
   fill(180, 180, 180);
   text("SCORE      : " + formatScore(Math.floor(score)), width / 2, height * 0.65);
   text("PHASE      : " + phaseManager.currentPhase + " / 3",  width / 2, height * 0.65 + 24);
   text("DISTANCE   : " + phaseManager.distance,               width / 2, height * 0.65 + 48);
 
-  // restart prompt
   fill(255, 255, 100);
   textSize(7);
   text("PRESS R TO RESTART", width / 2, height - 30);
   pop();
 }
 
-// keyboard input — works for any game state
 function keyPressed() {
-  // start screen — ENTER starts the game
   if (gameState === "start" && keyCode === ENTER) {
     gameState = "playing";
   }
 
-  // playing — P toggles pause
   if (gameState === "playing" && key === "p" || key === "P") {
     gameState = "paused";
   }
 
-  // paused — P resumes
   if (gameState === "paused" && (key === "p" || key === "P")) {
     gameState = "playing";
   }
 
-  // game over — R restarts
   if (gameState === "gameover" && (key === "r" || key === "R")) {
     _initGame();
     gameState = "playing";

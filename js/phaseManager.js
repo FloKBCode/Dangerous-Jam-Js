@@ -61,33 +61,33 @@ class PhaseManager {
     this.pendingPhase   = toPhase;
   }
 
-  // cinematic sequence :
-  // 0-60   : fade to black (player keeps running, world stops)
-  // 60-180 : black screen — player stops, voice message shown
-  // 180-240: fade back in with new phase
   _updateCinematic(player, world, transition, ui) {
     this.cinematicTimer++;
 
     if (this.cinematicState === "cinematic_out") {
-      // slow down world during fade
       world.scrollSpeed = max(0, world.scrollSpeed - 0.08);
       if (this.cinematicTimer >= 60) {
-        // switch phase at the black frame
         this.currentPhase   = this.pendingPhase;
         this.cinematicState = "cinematic_black";
         this.cinematicTimer = 0;
         world.scrollSpeed   = 0;
         if (this.pendingPhase === 2) {
           ui.showMessage(this.phase2Message);
+          soundTransition.play();
+          showPhaseLabel(2);
           musicPhase1.stop();
           musicPhase2.setLoop(true);
           musicPhase2.play();
         }
         if (this.pendingPhase === 3) {
           ui.showMessage(this.phase3Message);
+          soundTransition.play();
+          showPhaseLabel(3);
           musicPhase2.stop();
           musicPhase3.setLoop(true);
           musicPhase3.play();
+          soundBreathing.setLoop(true);
+          soundBreathing.play();
         }
       }
     }
@@ -100,7 +100,6 @@ class PhaseManager {
     }
 
     if (this.cinematicState === "cinematic_in") {
-      // speed back up progressively
       let targetSpeed = this.currentPhase === 2 ? 5 : 7;
       world.scrollSpeed = lerp(world.scrollSpeed, targetSpeed, 0.05);
       if (this.cinematicTimer >= 60) {
