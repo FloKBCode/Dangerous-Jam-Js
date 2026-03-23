@@ -10,7 +10,7 @@ class Player {
     this.isOnGround = false;
     this.isCrouching = false;
     this.isDead = false;
-    this.health = 100;
+    this.health = 9;
     this.runFrame = 0;
     this.frameTimer = 0;
   }
@@ -68,7 +68,5 @@ class Player {
         this.runFrame * 25, 0 * 25, 24, 24
       );
     }
-
-    pop();
   }
 }

@@ -9,6 +9,7 @@ let musicPhase1, musicPhase2, musicPhase3;
 
 // ── game objects ────────────────────────────────────────
 let player, world, ui, phaseManager, transition;
+let startScreen, pauseScreen, gameOverScreen;
 let obstacles = [];
 
 // ── game states ─────────────────────────────────────────
@@ -46,6 +47,9 @@ function preload() {
 function setup() {
   let canvas = createCanvas(800, 400);
   canvas.parent('game-container');
+  startScreen   = new StartScreen();
+  pauseScreen   = new PauseScreen();
+  gameOverScreen = new GameOverScreen();
   _initGame();
 }
 
@@ -69,7 +73,7 @@ function _initGame() {
 
 function draw() {
   if (gameState === "start") {
-    _drawStartScreen();
+    startScreen.draw();
     return;
   }
 
@@ -77,12 +81,12 @@ function draw() {
     world.draw(phaseManager.currentPhase, bgImg, sunImg, moonImg, hutImg, tileSheet);
     player.display();
     ui.draw(player.health, tileSheet);
-    drawPauseOverlay();
+    pauseScreen.draw();
     return;
   }
 
   if (gameState === "gameover") {
-    _drawGameOverScreen();
+    gameOverScreen.draw();
     return;
   }
 
@@ -129,7 +133,10 @@ function draw() {
 
   if (player.health <= 0 && !player.isDead) {
     player.isDead = true;
-    setTimeout(() => { gameState = "gameover"; }, 1500);
+    setTimeout(() => {
+      gameOverScreen.setStats(Math.floor(score), phaseManager.distance, phaseManager.currentPhase);
+      gameState = "gameover";
+    }, 1500);
   }
 
   phaseManager.update(player, world, transition, ui);
@@ -173,56 +180,6 @@ function draw() {
   transition.draw();
 
   drawPhaseLabel();
-}
-
-function _drawStartScreen() {
-  background(0);
-  drawTitle();
-  push();
-  textFont("'Press Start 2P'");
-  textSize(9);
-  textAlign(CENTER);
-  fill(200, 200, 200);
-  text("PRESS ENTER TO START", width / 2, height / 2 + 60);
-  fill(100, 100, 100);
-  text("JUMP: UP / SPACE   CROUCH: DOWN / S   PAUSE: P", width / 2, height - 30);
-  pop();
-}
-
-function _drawGameOverScreen() {
-  background(0);
-  push();
-  textFont("'Press Start 2P'");
-  textAlign(CENTER, CENTER);
-
-  noStroke();
-  fill(255, 255, 255, 30);
-  triangle(width/2 - 40, 0, width/2 + 40, 0, width/2, height * 0.55);
-  fill(255, 255, 255, 60);
-  triangle(width/2 - 15, 0, width/2 + 15, 0, width/2, height * 0.55);
-
-  if (deadImg) {
-    push();
-    translate(width / 2 + 16, height * 0.52 + 16);
-    rotate(HALF_PI);
-    image(deadImg, -16, -16, 32, 32);
-    pop();
-  }
-
-  textSize(18);
-  fill(255, 60, 60);
-  text("GAME OVER", width / 2, 60);
-
-  textSize(8);
-  fill(180, 180, 180);
-  text("SCORE      : " + formatScore(Math.floor(score)), width / 2, height * 0.65);
-  text("PHASE      : " + phaseManager.currentPhase + " / 3",  width / 2, height * 0.65 + 24);
-  text("DISTANCE   : " + phaseManager.distance,               width / 2, height * 0.65 + 48);
-
-  fill(255, 255, 100);
-  textSize(7);
-  text("PRESS R TO RESTART", width / 2, height - 30);
-  pop();
 }
 
 function keyPressed() {
