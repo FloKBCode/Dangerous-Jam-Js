@@ -88,14 +88,14 @@ class GameOverScreen {
       fill(200, 0, 0);
       textSize(14);
       text("GAME OVER", width / 2, height / 2 + 50);
+      fill(255, 255, 100);
+      textSize(12);
+      text("Press R to restart", width / 2, height / 2 + 75);
       fill(180);
       textSize(7);
-      text("SCORE    " + String(this.score).padStart(6, '0'), width / 2, height / 2 + 80);
-      text("DISTANCE " + this.distance + "m", width / 2, height / 2 + 100);
-      text("PHASE    " + this.phase, width / 2, height / 2 + 120);
-      fill(255);
-      textSize(6);
-      text("Press R to restart", width / 2, height / 2 + 155);
+      text("SCORE    " + String(this.score).padStart(6, '0'), width / 2, height / 2 + 100);
+      text("DISTANCE " + this.distance + "m", width / 2, height / 2 + 120);
+      text("PHASE    " + this.phase, width / 2, height / 2 + 140);
       pop();
     }
     pop();

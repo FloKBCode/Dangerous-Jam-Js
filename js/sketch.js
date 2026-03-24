@@ -13,7 +13,6 @@ let startScreen, pauseScreen, gameOverScreen;
 let obstacles = [];
 
 // ── game states ─────────────────────────────────────────
-// "start" | "playing" | "paused" | "gameover"
 let gameState   = "start";
 let score       = 0;
 let spawnTimer  = 0;
@@ -47,8 +46,8 @@ function preload() {
 function setup() {
   let canvas = createCanvas(800, 400);
   canvas.parent('game-container');
-  startScreen   = new StartScreen();
-  pauseScreen   = new PauseScreen();
+  startScreen    = new StartScreen();
+  pauseScreen    = new PauseScreen();
   gameOverScreen = new GameOverScreen();
   _initGame();
 }
@@ -87,6 +86,7 @@ function draw() {
 
   if (gameState === "gameover") {
     gameOverScreen.draw();
+    ui.drawLeaderboard(width / 2, height * 0.65 + 110);
     return;
   }
 
@@ -134,6 +134,7 @@ function draw() {
   if (player.health <= 0 && !player.isDead) {
     player.isDead = true;
     setTimeout(() => {
+      ui.saveScore(Math.floor(score));
       gameOverScreen.setStats(Math.floor(score), phaseManager.distance, phaseManager.currentPhase);
       gameState = "gameover";
     }, 1500);
