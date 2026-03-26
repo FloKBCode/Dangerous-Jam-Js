@@ -2,17 +2,17 @@
 
 class World {
   constructor() {
-    this.groundY    = 320;
+    this.groundY     = 320;
     this.scrollSpeed = 5;
-    this.tileSize   = 18;
+    this.tileSize    = 18;
 
-    // ground offset for scrolling tiles
+    // défilement du sol — synchronisé avec scrollSpeed (même vitesse que les obstacles)
     this.groundOffset = 0;
 
-    // parallax offset — background moves slower than ground
+    // parallax du fond — 25% de la vitesse du sol
     this.bgOffset = 0;
 
-    // clouds
+    // nuages
     this.clouds = [
       { x: 80,  y: 40,  w: 90,  h: 30, spd: 0.3  },
       { x: 300, y: 25,  w: 70,  h: 24, spd: 0.2  },
@@ -20,64 +20,64 @@ class World {
       { x: 700, y: 30,  w: 80,  h: 28, spd: 0.25 },
     ];
 
-    // hut — appears at the end of phase 2 to trigger phase 3
+    // cabane — déclencheur phase 3
     this.hutX       = 900;
     this.hutVisible = false;
   }
 
   update(phase) {
-    // pas de défilement du sol — ground fixe
+    // sol défile à la même vitesse que les obstacles
+    this.groundOffset -= this.scrollSpeed;
+    if (this.groundOffset <= -this.tileSize) {
+      this.groundOffset += this.tileSize; // wrap propre
+    }
 
-    // parallax — background moves at 20% of scroll speed
-    this.bgOffset -= this.scrollSpeed * 0.2;
+    // parallax fond — 25% de la vitesse du sol
+    this.bgOffset -= this.scrollSpeed * 0.25;
 
-    // scroll clouds
+    // nuages
     this.clouds.forEach(c => {
-      c.x -= c.spd;
+      c.x -= c.spd * (this.scrollSpeed / 3.5); // nuages s'adaptent à la vitesse
       if (c.x + c.w < 0) c.x = width + 10;
     });
 
-    // move hut into view at end of phase 2
+    // cabane
     if (this.hutVisible) {
       this.hutX -= this.scrollSpeed;
     }
   }
 
-  // show the hut to trigger phase 3 transition
   showHut() {
     this.hutVisible = true;
     this.hutX = 900;
   }
 
-  // returns true when player reaches the hut
   isHutReached(playerX) {
     return this.hutVisible && this.hutX <= playerX + 40;
   }
 
   draw(phase, bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg, tileSheet) {
-  this._drawSky(phase);
-  this._drawBackground(phase, bgImg, bgImg2, bgImg3);
-  this._drawCelestialBody(phase, sunImg, moonImg);
-  this.clouds.forEach(c => this._drawCloud(c, phase));
-  if (this.hutVisible) this._drawHut(hutImg);
-  this._drawGround(phase, tileSheet);
-}
+    this._drawSky(phase);
+    this._drawBackground(phase, bgImg, bgImg2, bgImg3);
+    this._drawCelestialBody(phase, sunImg, moonImg);
+    this.clouds.forEach(c => this._drawCloud(c, phase));
+    if (this.hutVisible) this._drawHut(hutImg);
+    this._drawGround(phase, tileSheet);
+    this._drawCRTOverlay(phase);
+  }
 
-  // sky — two flat rects instead of line-by-line for performance
   _drawSky(phase) {
     let topColor, bottomColor;
-
     if (phase === 1) {
-      topColor    = color(30, 100, 200);
-      bottomColor = color(120, 190, 255);
+      topColor    = color(10, 20, 80);   // bleu nuit saturé arcade
+      bottomColor = color(30, 80, 180);
     } else if (phase === 2) {
-      topColor    = color(20, 10, 60);
-      bottomColor = color(60, 30, 100);
+      topColor    = color(10, 0, 40);
+      bottomColor = color(40, 10, 80);
     } else {
-      topColor    = color(80, 0, 0);
-      bottomColor = color(180, 30, 30);
+      topColor    = color(60, 0, 0);
+      bottomColor = color(140, 10, 10);
     }
-
     noStroke();
     fill(topColor);
     rect(0, 0, width, this.groundY / 2);
@@ -85,19 +85,14 @@ class World {
     rect(0, this.groundY / 2, width, this.groundY / 2);
   }
 
-  // background forest with parallax and phase tint
   _drawBackground(phase, bgImg, bgImg2, bgImg3) {
-  // no tint needed — each phase has its own pre-colored image
-  noTint();
+    noTint();
+    let img = phase === 1 ? bgImg : phase === 2 ? bgImg2 : bgImg3;
+    let x = this.bgOffset % width;
+    image(img, x, 0, width, this.groundY);
+    image(img, x + width, 0, width, this.groundY);
+  }
 
-  let img = phase === 1 ? bgImg : phase === 2 ? bgImg2 : bgImg3;
-
-  let x = this.bgOffset % width;
-  image(img, x, 0, width, this.groundY);
-  image(img, x + width, 0, width, this.groundY);
-}
-
-  // sun phase 1 — moon phase 2 — red moon phase 3
   _drawCelestialBody(phase, sunImg, moonImg) {
     if (phase === 1) {
       image(sunImg, width - 90, 20, 60, 60);
@@ -112,9 +107,8 @@ class World {
     }
   }
 
-  // pixel art cloud drawn in P5.js
   _drawCloud(c, phase) {
-    let alpha = phase === 1 ? 220 : phase === 2 ? 120 : 80;
+    let alpha = phase === 1 ? 200 : phase === 2 ? 100 : 60;
     fill(255, 255, 255, alpha);
     noStroke();
     rect(c.x + c.w * 0.15, c.y + c.h * 0.35, c.w * 0.7,  c.h * 0.65);
@@ -123,7 +117,6 @@ class World {
     rect(c.x + c.w * 0.62, c.y + c.h * 0.2,  c.w * 0.33, c.h * 0.55);
   }
 
-  // hut with warm yellow glow
   _drawHut(hutImg) {
     noStroke();
     fill(255, 220, 50, 60);
@@ -131,22 +124,51 @@ class World {
     image(hutImg, this.hutX, this.groundY - 80, 80, 80);
   }
 
-  // two-layer scrolling ground — grass on top, dirt below
- _drawGround(phase, tileSheet) {
-  // no tint — ground keeps its natural color in all phases
-  noTint();
-
-  for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
-    image(tileSheet, x, this.groundY, this.tileSize, this.tileSize,
-      2 * 19, 1 * 19, 18, 18);
+  _drawGround(phase, tileSheet) {
+    noTint();
+    // rangée herbe — défile avec groundOffset
+    for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
+      image(tileSheet, x, this.groundY, this.tileSize, this.tileSize,
+        2 * 19, 1 * 19, 18, 18);
+    }
+    // rangées terre dessous
+    for (let y = this.groundY + this.tileSize; y < height; y += this.tileSize) {
+      for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
+        image(tileSheet, x, y, this.tileSize, this.tileSize,
+          2 * 19, 6 * 19, 18, 18);
+      }
+    }
   }
 
-  for (let y = this.groundY + this.tileSize; y < height; y += this.tileSize) {
-    for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
-      image(tileSheet, x, y, this.tileSize, this.tileSize,
-        2 * 19, 6 * 19, 18, 18);
+  // Effet CRT : scanlines + vignette + légère aberration chromatique sur les bords
+  _drawCRTOverlay(phase) {
+    // scanlines — une ligne sombre sur deux
+    noStroke();
+    for (let y = 0; y < height; y += 2) {
+      fill(0, 0, 0, 35);
+      rect(0, y, width, 1);
+    }
+
+    // vignette arrondie — plus intense selon la phase
+    let vigIntensity = phase === 1 ? 120 : phase === 2 ? 160 : 200;
+    for (let i = 0; i < 5; i++) {
+      let margin = i * 18;
+      fill(0, 0, 0, vigIntensity / 5);
+      noStroke();
+      rect(margin, margin, width - margin * 2, height - margin * 2, 8);
+    }
+
+    // léger bruit pixel en phase 3
+    if (phase === 3) {
+      randomSeed(frameCount * 7);
+      for (let i = 0; i < 12; i++) {
+        let nx = random(width);
+        let ny = random(height);
+        fill(255, 60, 60, random(40, 100));
+        noStroke();
+        rect(nx, ny, random(1, 3), 1);
+      }
+      randomSeed();
     }
   }
 }
-}
-
