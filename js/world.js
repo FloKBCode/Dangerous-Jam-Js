@@ -136,30 +136,21 @@ class World {
   }
 
   // two-layer scrolling ground — grass on top, dirt below
-  _drawGround(phase, tileSheet) {
-    if (phase === 1)      tint(255);
-    else if (phase === 2) tint(80, 80, 120);
-    else                  tint(160, 30, 30);
+ _drawGround(phase, tileSheet) {
+  // no tint — ground keeps its natural color in all phases
+  noTint();
 
-    // first row — grass tile c0 r0
-    for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
-      image(tileSheet,
-        x, this.groundY, this.tileSize, this.tileSize,
-        2 * 19, 1 * 19, 18, 18
-      );
-    }
-
-    // fill to bottom of canvas — dirt tile c0 r6
-    for (let y = this.groundY + this.tileSize; y < height; y += this.tileSize) {
-      for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
-        image(tileSheet,
-          x, y, this.tileSize, this.tileSize,
-          2 * 19, 6 * 19, 18, 18
-        );
-      }
-    }
-
-    noTint();
+  for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
+    image(tileSheet, x, this.groundY, this.tileSize, this.tileSize,
+      2 * 19, 1 * 19, 18, 18);
   }
+
+  for (let y = this.groundY + this.tileSize; y < height; y += this.tileSize) {
+    for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
+      image(tileSheet, x, y, this.tileSize, this.tileSize,
+        2 * 19, 6 * 19, 18, 18);
+    }
+  }
+}
 }
 

@@ -66,10 +66,7 @@ function _initGame() {
   hitFlash     = 0;
   healFlash    = 0;
   scorePopup   = 0;
-  if (musicPhase1 && !musicPhase1.isPlaying()) {
-    musicPhase1.setLoop(true);
-    musicPhase1.play();
-  }
+  // music starts in keyPressed — not here
 }
 
 function draw() {
@@ -186,20 +183,43 @@ function draw() {
 }
 
 function keyPressed() {
+  // start — ENTER launches the game AND starts music
   if (gameState === "start" && keyCode === ENTER) {
     gameState = "playing";
+    // start music only after user interaction — browser requirement
+    if (musicPhase1 && !musicPhase1.isPlaying()) {
+      musicPhase1.setLoop(true);
+      musicPhase1.play();
+    }
   }
 
+  // pause — P key
   if (gameState === "playing" && (key === "p" || key === "P")) {
     gameState = "paused";
+    if (musicPhase1.isPlaying()) musicPhase1.pause();
+    if (musicPhase2.isPlaying()) musicPhase2.pause();
+    if (musicPhase3.isPlaying()) musicPhase3.pause();
   }
 
+  // resume — P key
   if (gameState === "paused" && (key === "p" || key === "P")) {
     gameState = "playing";
+    // resume the right music based on current phase
+    let phase = phaseManager.currentPhase;
+    if (phase === 1 && !musicPhase1.isPlaying()) musicPhase1.play();
+    if (phase === 2 && !musicPhase2.isPlaying()) musicPhase2.play();
+    if (phase === 3 && !musicPhase3.isPlaying()) musicPhase3.play();
   }
 
+  // restart — R key
   if (gameState === "gameover" && (key === "r" || key === "R")) {
+    musicPhase1.stop();
+    musicPhase2.stop();
+    musicPhase3.stop();
+    if (soundBreathing.isPlaying()) soundBreathing.stop();
     _initGame();
     gameState = "playing";
+    musicPhase1.setLoop(true);
+    musicPhase1.play();
   }
 }
