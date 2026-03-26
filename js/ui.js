@@ -63,10 +63,37 @@ class UI {
 
   draw(hp, tileSheet, phase) {
     this._drawScore(phase);
-    this._drawMultiplier(phase);
     this._drawHearts(hp, tileSheet);
     this._drawPopups();
     if (this.messageTimer > 0) this._drawPhaseMessage();
+    this._drawSoundButton();
+  }
+
+  // Icône son/muet en bas à droite — touche M pour toggle
+  _drawSoundButton() {
+    push();
+    textFont("'Press Start 2P'");
+    textAlign(RIGHT, BOTTOM);
+    textSize(7);
+    noStroke();
+
+    // récupère l'état isMuted depuis la variable globale de sketch.js
+    let muted = (typeof isMuted !== "undefined") ? isMuted : false;
+
+    if (muted) {
+      // icône muet : rouge barré
+      fill(255, 60, 60, 200);
+      text("M MUTED", width - 12, height - 10);
+      // barre rouge
+      stroke(255, 60, 60, 200);
+      strokeWeight(1);
+      line(width - 58, height - 18, width - 48, height - 10);
+    } else {
+      // icône son : vert discret
+      fill(80, 200, 80, 140);
+      text("M  SOUND", width - 12, height - 10);
+    }
+    pop();
   }
 
   // Score en haut à gauche
@@ -80,23 +107,7 @@ class UI {
     pop();
   }
 
-  // Multiplicateur de phase affiché à côté du score
-  _drawMultiplier(phase) {
-    if (!phase || phase === 1) return; // pas affiché en phase 1 (x1 = normal)
 
-    push();
-    textFont("'Press Start 2P'");
-    textSize(9);
-    noStroke();
-
-    // couleur selon la phase : violet en phase 2, rouge en phase 3
-    if (phase === 2) fill(200, 140, 255);
-    else             fill(255, 80,  80);
-
-    let label = "x" + phase; // "x2" ou "x3"
-    text(label, 175, 25);
-    pop();
-  }
 
   // 3 cœurs (chacun vaut 3 HP) tirés du tilemap
   _drawHearts(hp, tileSheet) {

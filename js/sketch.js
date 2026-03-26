@@ -16,6 +16,9 @@ let score     = 0;
 let hitFlash  = 0;
 let healFlash = 0;
 
+// son — muet ou non
+let isMuted = false;
+
 let screenshakeTimer     = 0;
 let screenshakeIntensity = 0;
 
@@ -161,7 +164,7 @@ function draw() {
       let oy = obstacles[i].y;
       if (effect.hp < 0) {
         hitFlash = 15;
-        if (soundHurt.isLoaded()) soundHurt.play();
+        if (soundHurt.isLoaded()) { soundHurt.setVolume(isMuted ? 0 : 1); soundHurt.play(); }
         ui.addPopup(ox, oy, effect.hp + " HP", "damage");
       }
       if (effect.hp > 0) {
@@ -288,6 +291,27 @@ function keyPressed() {
     return false;
   }
 
+  // M — toggle son (fonctionne dans tous les états)
+  if (key === "m" || key === "M") {
+    isMuted = !isMuted;
+    if (isMuted) {
+      if (musicPhase1 && musicPhase1.isLoaded())   musicPhase1.setVolume(0);
+      if (musicPhase2 && musicPhase2.isLoaded())   musicPhase2.setVolume(0);
+      if (musicPhase3 && musicPhase3.isLoaded())   musicPhase3.setVolume(0);
+      if (soundBreathing && soundBreathing.isLoaded()) soundBreathing.setVolume(0);
+      if (soundJump && soundJump.isLoaded())       soundJump.setVolume(0);
+      if (soundHurt && soundHurt.isLoaded())       soundHurt.setVolume(0);
+    } else {
+      if (musicPhase1 && musicPhase1.isLoaded())   musicPhase1.setVolume(1);
+      if (musicPhase2 && musicPhase2.isLoaded())   musicPhase2.setVolume(1);
+      if (musicPhase3 && musicPhase3.isLoaded())   musicPhase3.setVolume(1);
+      if (soundBreathing && soundBreathing.isLoaded()) soundBreathing.setVolume(1);
+      if (soundJump && soundJump.isLoaded())       soundJump.setVolume(1);
+      if (soundHurt && soundHurt.isLoaded())       soundHurt.setVolume(1);
+    }
+    return false;
+  }
+
   if ([32, 37, 38, 39, 40].includes(keyCode)) return false;
 }
 
@@ -300,6 +324,7 @@ function _stopAllMusic() {
 
 function _startMusic() {
   if (musicPhase1 && musicPhase1.isLoaded()) {
+    musicPhase1.setVolume(isMuted ? 0 : 1);
     musicPhase1.setLoop(true);
     musicPhase1.play();
   }

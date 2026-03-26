@@ -1,6 +1,42 @@
-// screens.js — écrans Start, Pause et Game Over
+// screens.js — écrans Start, Pause et Game Over — style CRT Arcade
 
-// ── ÉCRAN DE DÉMARRAGE ────────────────────────────────────
+// Palette CRT saturée
+const CRT_YELLOW  = [255, 240, 0];
+const CRT_RED     = [255, 30, 30];
+const CRT_GREEN   = [0, 255, 80];
+const CRT_CYAN    = [0, 220, 255];
+const CRT_WHITE   = [230, 240, 220]; // blanc légèrement teinté phosphore
+const CRT_GRAY    = [120, 140, 110];
+const CRT_PURPLE  = [200, 80, 255];
+const CRT_ORANGE  = [255, 140, 0];
+
+// Dessine un texte avec halo phosphore CRT
+function crtText(txt, x, y, sz, r, g, b, glowAlpha) {
+  let ga = glowAlpha || 60;
+  textSize(sz);
+  // halo
+  fill(r, g, b, ga);
+  text(txt, x + 2, y + 2);
+  text(txt, x - 2, y - 2);
+  text(txt, x + 2, y - 2);
+  text(txt, x - 2, y + 2);
+  // texte principal
+  fill(r, g, b);
+  text(txt, x, y);
+}
+
+// Ligne horizontale style arcade (avec glow)
+function crtLine(x1, y1, x2, y2, r, g, b) {
+  stroke(r, g, b, 60);
+  strokeWeight(3);
+  line(x1, y1, x2, y2);
+  stroke(r, g, b);
+  strokeWeight(1);
+  line(x1, y1, x2, y2);
+  noStroke();
+}
+
+// ── ÉCRAN DE DÉMARRAGE ────────────────────────────────────────────────────────
 class StartScreen {
   constructor() {
     this.timer = 0;
@@ -8,223 +44,229 @@ class StartScreen {
 
   draw() {
     this.timer++;
-    background(0);
+    background(2, 4, 2); // noir quasi total, teinte phosphore
 
-    // vignette : bords sombres
+    // grille de fond style arcade — lignes horizontales très subtiles
+    stroke(0, 40, 0, 40);
+    strokeWeight(1);
+    for (let y = 0; y < height; y += 16) {
+      line(0, y, width, y);
+    }
     noStroke();
-    for (let i = 0; i < 6; i++) {
-      fill(0, 0, 0, 40 - i * 5);
-      rect(i * 14, i * 7, width - i * 28, height - i * 14);
+
+    // INSERT COIN clignotant en bas — style borne d'arcade
+    if (this.timer % 60 < 40) {
+      push();
+      textFont("'Press Start 2P'");
+      textAlign(CENTER, CENTER);
+      crtText("INSERT COIN", width / 2, height - 24, 7,
+        ...CRT_YELLOW, 80);
+      pop();
     }
 
-    // légères particules d'ambiance (points qui tombent lentement)
-    fill(255, 255, 255, 20);
+    // bandes colorées latérales style arcade
     noStroke();
-    randomSeed(this.timer * 0.2 | 0);
-    for (let i = 0; i < 30; i++) {
-      let px = random(width);
-      let py = (random(height) + this.timer * 0.4) % height;
-      ellipse(px, py, 1.5);
-    }
-    randomSeed();
+    fill(...CRT_RED, 30);
+    rect(0, 0, 6, height);
+    rect(width - 6, 0, 6, height);
+    fill(...CRT_YELLOW, 20);
+    rect(6, 0, 4, height);
+    rect(width - 10, 0, 4, height);
 
-    // titre principal — pulsation lente
-    let pulse = 0.97 + sin(this.timer * 0.04) * 0.03;
+    // titre avec effet de pulsation + glow phosphore
+    let pulse = 0.96 + sin(this.timer * 0.05) * 0.04;
     push();
-    translate(width / 2, height / 2 - 70);
+    translate(width / 2, height / 2 - 80);
     scale(pulse);
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
-    textSize(24);
-    // ombre
-    fill(180, 0, 0, 180);
-    text("TRUST NO ONE", 2, 2);
-    // texte principal
-    fill(255, 220, 50);
-    text("TRUST NO ONE", 0, 0);
+
+    // ombre décalée rouge
+    fill(...CRT_RED, 200);
+    textSize(26);
+    text("TRUST NO ONE", 3, 3);
+
+    // texte principal jaune phosphore
+    crtText("TRUST NO ONE", 0, 0, 26, ...CRT_YELLOW, 100);
     pop();
 
-    // sous-titre
+    // sous-titre cyan
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
-    textSize(7);
-    fill(200, 180, 180, 200);
-    text("A world where nothing is what it seems", width / 2, height / 2 - 30);
+    crtText("A world where nothing is what it seems",
+      width / 2, height / 2 - 30, 6, ...CRT_CYAN, 50);
     pop();
 
-    // "PRESS ENTER" clignotant
+    // ligne séparatrice
+    crtLine(width / 2 - 180, height / 2 - 10,
+            width / 2 + 180, height / 2 - 10,
+            ...CRT_GREEN);
+
+    // PRESS ENTER clignotant — style arcade classique
+    if (this.timer % 50 < 35) {
+      push();
+      textFont("'Press Start 2P'");
+      textAlign(CENTER, CENTER);
+      crtText("PRESS ENTER TO START", width / 2, height / 2 + 18,
+        9, ...CRT_WHITE, 70);
+      pop();
+    }
+
+    // contrôles en vert phosphore discret
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
-    textSize(9);
-    let blinkAlpha = (sin(this.timer * 0.08) > 0) ? 255 : 0;
-    fill(255, 255, 255, blinkAlpha);
-    text("PRESS ENTER TO START", width / 2, height / 2 + 20);
+    crtText("UP / SPACE : JUMP     DOWN / S : CROUCH",
+      width / 2, height / 2 + 55, 6, ...CRT_GREEN, 40);
+    crtText("P : PAUSE",
+      width / 2, height / 2 + 75, 6, ...CRT_GREEN, 40);
     pop();
 
-    // séparateur
-    stroke(80, 80, 80);
-    strokeWeight(1);
-    line(width / 2 - 160, height / 2 + 48, width / 2 + 160, height / 2 + 48);
+    // coins décoratifs style borne d'arcade
+    this._drawCorners();
+  }
+
+  _drawCorners() {
+    let s = 16;
+    stroke(...CRT_YELLOW, 180);
+    strokeWeight(2);
+    noFill();
+    // coin haut gauche
+    line(10, 10, 10 + s, 10);
+    line(10, 10, 10, 10 + s);
+    // coin haut droit
+    line(width - 10 - s, 10, width - 10, 10);
+    line(width - 10, 10, width - 10, 10 + s);
+    // coin bas gauche
+    line(10, height - 10, 10 + s, height - 10);
+    line(10, height - 10 - s, 10, height - 10);
+    // coin bas droit
+    line(width - 10 - s, height - 10, width - 10, height - 10);
+    line(width - 10, height - 10 - s, width - 10, height - 10);
     noStroke();
-
-    // contrôles
-    push();
-    textFont("'Press Start 2P'");
-    textAlign(CENTER, CENTER);
-    textSize(6);
-    fill(120, 120, 120);
-    text("JUMP : ARROW UP / SPACE     CROUCH : ARROW DOWN / S", width / 2, height / 2 + 64);
-    text("PAUSE : P", width / 2, height / 2 + 82);
-    pop();
   }
 }
 
-// ── ÉCRAN DE PAUSE ────────────────────────────────────────
+// ── ÉCRAN DE PAUSE ─────────────────────────────────────────────────────────────
 class PauseScreen {
-  // score      : score actuel
-  // bestScore  : meilleur score (localStorage)
-  // phase      : phase en cours (1, 2 ou 3)
   draw(score, bestScore, phase) {
-    // overlay semi-transparent sur le jeu
+    // overlay sombre semi-transparent
     noStroke();
-    fill(0, 0, 0, 175);
+    fill(0, 0, 0, 200);
     rect(0, 0, width, height);
 
-    // panneau central
-    let panelW = 600;
-    let panelH = 260;
-    let panelX = (width - panelW) / 2;
-    let panelY = (height - panelH) / 2;
+    // panneau principal style terminal CRT
+    let pw = 620, ph = 270;
+    let px = (width - pw) / 2, py = (height - ph) / 2;
 
-    fill(15, 15, 25, 230);
-    stroke(60, 60, 80);
+    // fond du panneau — vert très sombre
+    fill(0, 8, 0, 240);
+    noStroke();
+    rect(px, py, pw, ph);
+
+    // bordure double style CRT
+    stroke(...CRT_GREEN, 200);
     strokeWeight(1);
-    rect(panelX, panelY, panelW, panelH, 6);
+    noFill();
+    rect(px, py, pw, ph);
+    stroke(...CRT_GREEN, 60);
+    rect(px + 3, py + 3, pw - 6, ph - 6);
     noStroke();
 
-    // titre PAUSED
+    // titre ── PAUSED ──
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
-    textSize(16);
-    fill(255, 255, 255);
-    text("PAUSED", width / 2, panelY + 30);
+    crtText("-- PAUSED --", width / 2, py + 28, 14, ...CRT_GREEN, 120);
     pop();
 
-    // ligne de séparation
-    stroke(50, 50, 70);
-    strokeWeight(1);
-    line(panelX + 20, panelY + 50, panelX + panelW - 20, panelY + 50);
-    noStroke();
+    // ligne séparatrice
+    crtLine(px + 16, py + 50, px + pw - 16, py + 50, ...CRT_GREEN);
 
-    // ── colonne gauche : scores ──
-    let col1X = panelX + 30;
-    let col1Y = panelY + 70;
+    // ── Colonne gauche : scores ──────────────────────────────────────────────
+    let c1x = px + 24, c1y = py + 68;
     push();
     textFont("'Press Start 2P'");
     textAlign(LEFT, TOP);
-    textSize(7);
 
-    fill(160, 160, 160);
-    text("SCORE", col1X, col1Y);
-    textSize(10);
-    fill(255, 255, 100);
-    text(String(Math.floor(score)).padStart(6, "0"), col1X, col1Y + 18);
+    crtText("SCORE", c1x, c1y, 7, ...CRT_GRAY, 30);
+    crtText(String(Math.floor(score)).padStart(6, "0"), c1x, c1y + 18, 11, ...CRT_YELLOW, 90);
 
-    textSize(7);
-    fill(160, 160, 160);
-    text("BEST", col1X, col1Y + 50);
-    textSize(10);
-    fill(100, 220, 100);
-    text(String(bestScore).padStart(6, "0"), col1X, col1Y + 68);
+    crtText("BEST", c1x, c1y + 52, 7, ...CRT_GRAY, 30);
+    crtText(String(bestScore).padStart(6, "0"), c1x, c1y + 70, 11, ...CRT_GREEN, 90);
     pop();
 
-    // ── colonne centre : phase + règles actives ──
-    let col2X = width / 2;
-    let col2Y = panelY + 70;
+    // ── Colonne centre : phase + règles ──────────────────────────────────────
+    let c2x = width / 2, c2y = py + 68;
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, TOP);
-    textSize(7);
 
-    // couleur de phase
-    let phaseColors = [color(100,200,255), color(180,100,255), color(255,80,80)];
-    fill(phaseColors[phase - 1]);
-    text("PHASE " + phase, col2X, col2Y);
+    let phaseColor = phase === 1 ? CRT_CYAN : phase === 2 ? CRT_PURPLE : CRT_RED;
+    crtText("PHASE " + phase, c2x, c2y, 8, ...phaseColor, 100);
 
-    // règles actives selon la phase
-    textSize(6);
-    fill(200, 200, 200);
     let rules = _getPauseRules(phase);
     for (let i = 0; i < rules.length; i++) {
-      fill(rules[i].col);
-      text(rules[i].text, col2X, col2Y + 20 + i * 16);
+      let [r, g, b] = rules[i].crt;
+      crtText(rules[i].text, c2x, c2y + 24 + i * 17, 6, r, g, b, 50);
     }
     pop();
 
-    // ── colonne droite : contrôles ──
-    let col3X = panelX + panelW - 30;
-    let col3Y = panelY + 70;
+    // ── Colonne droite : contrôles ────────────────────────────────────────────
+    let c3x = px + pw - 24, c3y = py + 68;
     push();
     textFont("'Press Start 2P'");
     textAlign(RIGHT, TOP);
-    textSize(6);
-    fill(160, 160, 160);
-    text("CONTROLS", col3X, col3Y);
-    fill(220, 220, 220);
-    text("JUMP   UP / SPACE", col3X, col3Y + 18);
-    text("CROUCH  DOWN / S", col3X, col3Y + 34);
-    text("PAUSE         P", col3X, col3Y + 50);
-    text("RESTART       R", col3X, col3Y + 66);
+    crtText("CONTROLS", c3x, c3y, 6, ...CRT_GRAY, 30);
+    crtText("UP/SPACE  JUMP",    c3x, c3y + 18, 6, ...CRT_WHITE, 50);
+    crtText("DOWN/S    CROUCH",  c3x, c3y + 34, 6, ...CRT_WHITE, 50);
+    crtText("P         RESUME",  c3x, c3y + 50, 6, ...CRT_WHITE, 50);
+    crtText("R         RESTART", c3x, c3y + 66, 6, ...CRT_WHITE, 50);
     pop();
 
-    // ── bas du panneau : boutons ──
+    // ── Bas du panneau ─────────────────────────────────────────────────────────
+    crtLine(px + 16, py + ph - 44, px + pw - 16, py + ph - 44, ...CRT_GREEN);
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
-    textSize(7);
-    fill(180, 180, 180);
-    text("P  RESUME", width / 2 - 70, panelY + panelH - 22);
-    text("R  RESTART", width / 2 + 70, panelY + panelH - 22);
+    crtText("[P] RESUME", width / 2 - 90, py + ph - 24, 7, ...CRT_GREEN, 60);
+    crtText("[R] RESTART", width / 2 + 90, py + ph - 24, 7, ...CRT_RED, 60);
     pop();
   }
 }
 
-// Retourne les règles actives à afficher dans la page de pause
+// Règles par phase avec couleurs CRT
 function _getPauseRules(phase) {
   if (phase === 1) {
     return [
-      { text: "COIN  > +10 pts",   col: color(255, 220, 50)  },
-      { text: "SPIKE > -2 HP",     col: color(255, 80, 80)   },
-      { text: "CROSS > +2 HP",     col: color(80, 255, 120)  }
+      { text: "COIN  > +10 pts", crt: CRT_YELLOW },
+      { text: "SPIKE > -2 HP",   crt: CRT_RED    },
+      { text: "CROSS > +2 HP",   crt: CRT_GREEN  },
     ];
   } else if (phase === 2) {
     return [
-      { text: "COIN  > -2 HP !",   col: color(255, 80, 80)   },
-      { text: "SPIKE > +2 HP !",   col: color(80, 255, 120)  },
-      { text: "CROSS > -2 HP !",   col: color(255, 80, 80)   }
+      { text: "COIN  > -2 HP !", crt: CRT_RED    },
+      { text: "SPIKE > +2 HP !", crt: CRT_GREEN  },
+      { text: "CROSS > -2 HP !", crt: CRT_RED    },
     ];
   } else {
     return [
-      { text: "COIN  > -2 HP",     col: color(255, 80, 80)   },
-      { text: "RED   > -3 HP",     col: color(255, 40, 40)   },
-      { text: "BLUE  > +2 HP",     col: color(80, 200, 255)  }
+      { text: "COIN  > -2 HP",   crt: CRT_RED    },
+      { text: "RED   > -3 HP",   crt: CRT_ORANGE },
+      { text: "BLUE  > +2 HP",   crt: CRT_CYAN   },
     ];
   }
 }
 
-// ── ÉCRAN GAME OVER ───────────────────────────────────────
+// ── ÉCRAN GAME OVER ────────────────────────────────────────────────────────────
 class GameOverScreen {
   constructor() {
-    this.score    = 0;
-    this.distance = 0;
-    this.phase    = 1;
-    this.timer    = 0;
-    this.spotY    = -height;
-
-    // états d'apparition progressive
+    this.score      = 0;
+    this.distance   = 0;
+    this.phase      = 1;
+    this.timer      = 0;
+    this.spotY      = -height;
     this.showCorpse = false;
     this.showStats  = false;
     this.showPrompt = false;
@@ -243,108 +285,98 @@ class GameOverScreen {
 
   update() {
     this.timer++;
-    this.spotY = lerp(this.spotY, height / 2 - 60, 0.05);
-    if (this.timer > 60)  this.showCorpse = true;
-    if (this.timer > 110) this.showStats  = true;
-    if (this.timer > 170) this.showPrompt = true;
+    this.spotY = lerp(this.spotY, height / 2 - 50, 0.06);
+    if (this.timer > 50)  this.showCorpse = true;
+    if (this.timer > 100) this.showStats  = true;
+    if (this.timer > 160) this.showPrompt = true;
   }
 
   draw() {
     this.update();
     push();
-    background(0);
+    background(0, 2, 0); // noir phosphore
 
-    // fond avec légère teinte rouge selon la phase atteinte
+    // scanlines sur le game over aussi
+    noStroke();
+    for (let y = 0; y < height; y += 2) {
+      fill(0, 0, 0, 30);
+      rect(0, y, width, 1);
+    }
+
+    // teinte rouge si phase 3
     if (this.phase >= 3) {
-      noStroke();
-      fill(40, 0, 0, 180);
+      fill(40, 0, 0, 120);
       rect(0, 0, width, height);
     }
 
-    // spotlight — image PNG centrée, descend depuis le haut
+    // spotlight image ou fallback
     if (typeof spotlightImg !== "undefined" && spotlightImg) {
-      let sw = 220;   // largeur du spotlight
-      let sh = 300;   // hauteur du spotlight
+      let sw = 240, sh = 320;
       let sx = width / 2 - sw / 2;
-      let sy = this.spotY - sh + 40; // le bas du spotlight pointe vers le sol
-      tint(255, 200); // légèrement transparent
+      let sy = this.spotY - sh + 50;
+      tint(255, 180);
       image(spotlightImg, sx, sy, sw, sh);
       noTint();
     } else {
-      // fallback si image pas chargée : trait lumineux
+      // fallback : rayon lumineux style CRT
       push();
-      let grad = drawingContext.createLinearGradient(width / 2, this.spotY - 120, width / 2, this.spotY + 60);
-      grad.addColorStop(0, "rgba(255,255,255,0.7)");
-      grad.addColorStop(1, "rgba(255,255,255,0)");
+      let grad = drawingContext.createLinearGradient(
+        width / 2, this.spotY - 140, width / 2, this.spotY + 60);
+      grad.addColorStop(0, "rgba(200,255,200,0.6)");
+      grad.addColorStop(1, "rgba(0,255,60,0)");
       drawingContext.fillStyle = grad;
-      drawingContext.fillRect(width / 2 - 40, this.spotY - 120, 80, 180);
+      drawingContext.fillRect(width / 2 - 50, this.spotY - 140, 100, 200);
       pop();
     }
 
-    // personnage mort — sprite player_dead.png
+    // sprite mort
     if (this.showCorpse) {
       if (typeof deadImg !== "undefined" && deadImg) {
         push();
-        // le sprite est couché — on le place au centre légèrement au-dessus du sol
-        let dw = 48;
-        let dh = 48;
         imageMode(CENTER);
-        image(deadImg, width / 2, height / 2 - 10, dw, dh);
+        // léger tint phosphore vert sur le cadavre
+        tint(200, 255, 200, 220);
+        image(deadImg, width / 2, height / 2 - 8, 48, 48);
+        noTint();
         imageMode(CORNER);
         pop();
-      } else {
-        // fallback dessiné en P5
-        noStroke();
-        fill(100, 0, 0);
-        rect(width / 2 - 18, height / 2 - 6, 36, 14, 3);
-        fill(120, 60, 60);
-        ellipse(width / 2, height / 2 - 18, 22, 20);
       }
     }
 
-    // stats avec apparition décalée
+    // stats
     if (this.showStats) {
       push();
       textFont("'Press Start 2P'");
       textAlign(CENTER, CENTER);
       noStroke();
 
-      // "YOU DIED" en rouge sang
-      textSize(20);
-      fill(140, 0, 0);
-      text("YOU DIED", width / 2 + 2, height / 2 + 38 + 2); // ombre
-      fill(220, 30, 30);
-      text("YOU DIED", width / 2, height / 2 + 38);
+      // GAME OVER — style arcade rouge phosphore
+      crtText("GAME  OVER", width / 2, height / 2 + 34, 20, ...CRT_RED, 120);
 
       // séparateur
-      stroke(60, 0, 0);
-      strokeWeight(1);
-      line(width / 2 - 120, height / 2 + 60, width / 2 + 120, height / 2 + 60);
-      noStroke();
+      crtLine(width / 2 - 130, height / 2 + 58, width / 2 + 130, height / 2 + 58, ...CRT_RED);
 
-      // stats
-      textSize(7);
-      fill(180, 180, 180);
-      text("SCORE    " + String(this.score).padStart(6, "0"), width / 2, height / 2 + 76);
-      text("DISTANCE " + this.distance + "m",               width / 2, height / 2 + 94);
+      // stats style terminal
+      crtText("SCORE    " + String(this.score).padStart(6, "0"),
+        width / 2, height / 2 + 74, 7, ...CRT_YELLOW, 60);
+      crtText("DISTANCE " + this.distance + "m",
+        width / 2, height / 2 + 92, 7, ...CRT_WHITE, 40);
 
-      // phase avec couleur
-      let phaseColors = [color(100,200,255), color(180,100,255), color(255,80,80)];
-      fill(phaseColors[this.phase - 1]);
-      text("PHASE    " + this.phase,                        width / 2, height / 2 + 112);
+      let phaseColor = this.phase === 1 ? CRT_CYAN : this.phase === 2 ? CRT_PURPLE : CRT_RED;
+      crtText("PHASE    " + this.phase,
+        width / 2, height / 2 + 110, 7, ...phaseColor, 60);
 
       pop();
     }
 
-    // "Press R to restart" clignotant
+    // prompt clignotant
     if (this.showPrompt) {
       push();
       textFont("'Press Start 2P'");
       textAlign(CENTER, CENTER);
-      textSize(8);
-      let blinkAlpha = (sin(this.timer * 0.08) > 0) ? 220 : 0;
-      fill(255, 255, 255, blinkAlpha);
-      text("PRESS R TO RESTART", width / 2, height / 2 + 136);
+      if (this.timer % 50 < 35) {
+        crtText("PRESS R TO CONTINUE", width / 2, height / 2 + 136, 8, ...CRT_GREEN, 80);
+      }
       pop();
     }
 
@@ -352,7 +384,7 @@ class GameOverScreen {
   }
 }
 
-// ── Label de phase (haut droite) ─────────────────────────
+// ── Label de phase ────────────────────────────────────────────────────────────
 let phaseLabelTimer = 0;
 let phaseLabelText  = "";
 
@@ -362,14 +394,14 @@ function drawPhaseLabel() {
   push();
   textFont("'Press Start 2P'");
   textAlign(RIGHT, TOP);
-  textSize(8);
-  fill(255, 255, 255, map(phaseLabelTimer, 0, 180, 0, 255));
-  text(phaseLabelText, width - 20, 20);
+  noStroke();
+  let alpha = map(phaseLabelTimer, 0, 180, 0, 255);
+  crtText(phaseLabelText, width - 20, 20, 8, ...CRT_GREEN, alpha * 0.4);
   pop();
   phaseLabelTimer--;
 }
 
 function showPhaseLabel(phase) {
-  phaseLabelText  = "— PHASE " + phase + " —";
+  phaseLabelText  = "-- PHASE " + phase + " --";
   phaseLabelTimer = 180;
 }
