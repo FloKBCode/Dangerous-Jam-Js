@@ -1,26 +1,39 @@
-// formatScore function — converts numbers to 6-digit zero-padded strings
+// formatScore — convertit un nombre en chaîne à 6 chiffres avec zéros de remplissage
 function formatScore(score) {
   return score.toString().padStart(6, "0");
 }
 
-// UI class — renders score, hearts, phase messages and game over screen
+// UI class — score, cœurs, multiplicateur, popups de collision, messages de phase
 class UI {
   constructor() {
-    this.score = 0;
-    this.maxHP = 9;
-    this.phaseMessage = "";
-    this.messageTimer = 0;
+    this.score           = 0;
+    this.maxHP           = 9;
+    this.phaseMessage    = "";
+    this.messageTimer    = 0;
     this.messageDuration = 180;
-    this.messageAlpha = 0;
+    this.messageAlpha    = 0;
+
+    // popups de collision positionnés sur l'objet touché
+    // chaque popup : { x, y, text, color, timer, maxTimer }
+    this.popups = [];
   }
 
   update(score) {
     this.score = score;
+
+    // décompte du message de phase
     if (this.messageTimer > 0) {
       this.messageTimer--;
       this.messageAlpha = this.messageTimer > 60
         ? 255
         : map(this.messageTimer, 0, 60, 0, 255);
+    }
+
+    // mise à jour des popups : monte et fade out
+    for (let i = this.popups.length - 1; i >= 0; i--) {
+      this.popups[i].timer--;
+      this.popups[i].y -= 0.6; // remonte doucement
+      if (this.popups[i].timer <= 0) this.popups.splice(i, 1);
     }
   }
 
@@ -30,15 +43,34 @@ class UI {
     this.messageAlpha = 255;
   }
 
-  draw(hp, tileSheet) {
-    this._drawScore();
-    this._drawHearts(hp, tileSheet);
-    if (this.messageTimer > 0) {
-      this._drawPhaseMessage();
-    }
+  // Ajoute un popup de feedback à la position de l'objet touché
+  // type : "damage" | "heal" | "score"
+  addPopup(x, y, text, type) {
+    let col;
+    if (type === "damage") col = color(255, 60, 60);
+    else if (type === "heal") col = color(80, 255, 120);
+    else col = color(255, 220, 0); // score
+
+    this.popups.push({
+      x:        x + 9,  // centré sur l'obstacle (18px de large)
+      y:        y - 4,  // légèrement au-dessus
+      text:     text,
+      col:      col,
+      timer:    45,
+      maxTimer: 45
+    });
   }
 
-  _drawScore() {
+  draw(hp, tileSheet, phase) {
+    this._drawScore(phase);
+    this._drawMultiplier(phase);
+    this._drawHearts(hp, tileSheet);
+    this._drawPopups();
+    if (this.messageTimer > 0) this._drawPhaseMessage();
+  }
+
+  // Score en haut à gauche
+  _drawScore(phase) {
     push();
     textFont("'Press Start 2P'");
     textSize(10);
@@ -48,21 +80,38 @@ class UI {
     pop();
   }
 
+  // Multiplicateur de phase affiché à côté du score
+  _drawMultiplier(phase) {
+    if (!phase || phase === 1) return; // pas affiché en phase 1 (x1 = normal)
+
+    push();
+    textFont("'Press Start 2P'");
+    textSize(9);
+    noStroke();
+
+    // couleur selon la phase : violet en phase 2, rouge en phase 3
+    if (phase === 2) fill(200, 140, 255);
+    else             fill(255, 80,  80);
+
+    let label = "x" + phase; // "x2" ou "x3"
+    text(label, 175, 25);
+    pop();
+  }
+
+  // 3 cœurs (chacun vaut 3 HP) tirés du tilemap
   _drawHearts(hp, tileSheet) {
     const heartSize = 24;
-    const startX = 20;
-    const startY = 35;
-    const gap = 28;
+    const startX    = 20;
+    const startY    = 35;
+    const gap       = 28;
+
     for (let i = 0; i < 3; i++) {
       const heartHP = hp - i * 3;
       let col;
-      if (heartHP >= 3) {
-        col = 4;
-      } else if (heartHP >= 1) {
-        col = 5;
-      } else {
-        col = 6;
-      }
+      if (heartHP >= 3)      col = 4; // cœur plein
+      else if (heartHP >= 1) col = 5; // cœur à moitié
+      else                   col = 6; // cœur vide
+
       image(tileSheet,
         startX + i * gap, startY, heartSize, heartSize,
         col * 19, 2 * 19, 18, 18
@@ -70,32 +119,63 @@ class UI {
     }
   }
 
+  // Popups de feedback flottants au-dessus des objets touchés
+  _drawPopups() {
+    push();
+    textFont("'Press Start 2P'");
+    textSize(8);
+    textAlign(CENTER);
+    noStroke();
+
+    for (let p of this.popups) {
+      // fade out dans le dernier tiers de vie
+      let alpha = p.timer > p.maxTimer * 0.4
+        ? 255
+        : map(p.timer, 0, p.maxTimer * 0.4, 0, 255);
+
+      let c = p.col;
+      fill(red(c), green(c), blue(c), alpha);
+      text(p.text, p.x, p.y);
+    }
+
+    pop();
+  }
+
+  // Message narratif de transition de phase (centré, fond semi-transparent)
   _drawPhaseMessage() {
     push();
     textFont("'Press Start 2P'");
     textSize(9);
     textAlign(CENTER, CENTER);
+    let msgWidth = textWidth(this.phaseMessage) + 40;
+
     fill(0, 0, 0, this.messageAlpha * 0.7);
     noStroke();
     rectMode(CENTER);
-    rect(width / 2, height / 2 - 40,
-         textWidth(this.phaseMessage) + 40, 30, 4);
+    rect(width / 2, height / 2 - 40, msgWidth, 30, 4);
+
     fill(255, 255, 255, this.messageAlpha);
     text(this.phaseMessage, width / 2, height / 2 - 40);
     pop();
   }
 
-  // ── leaderboard ──────────────────────────────────────
+  // ── Leaderboard ───────────────────────────────────────
+
   saveScore(score) {
-    let scores = JSON.parse(localStorage.getItem('tno_scores') || '[]');
+    let scores = JSON.parse(localStorage.getItem("tno_scores") || "[]");
     scores.push(score);
     scores.sort((a, b) => b - a);
     scores = scores.slice(0, 5);
-    localStorage.setItem('tno_scores', JSON.stringify(scores));
+    localStorage.setItem("tno_scores", JSON.stringify(scores));
   }
 
   getTopScores() {
-    return JSON.parse(localStorage.getItem('tno_scores') || '[]');
+    return JSON.parse(localStorage.getItem("tno_scores") || "[]");
+  }
+
+  getBestScore() {
+    let scores = this.getTopScores();
+    return scores.length > 0 ? scores[0] : 0;
   }
 
   drawLeaderboard(x, y) {

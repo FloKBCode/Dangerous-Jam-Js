@@ -1,35 +1,34 @@
-// Main P5.js file — contains setup() and draw(), the core game loop
+// sketch.js — boucle principale P5.js : setup(), draw(), keyPressed()
 
-// ── global image variables ──────────────────────────────
-let spritesheet, deadImg;
+// ── Variables globales images ───────────────────────────────────────────────
+let spritesheet, deadImg, spotlightImg;
 let tileSheet, characterSheet, diamondGood, diamondBad;
 let bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg;
 let soundJump, soundHurt, soundTransition, soundBreathing;
 let musicPhase1, musicPhase2, musicPhase3;
 
-// ── game objects ────────────────────────────────────────
+// ── Objets de jeu ───────────────────────────────────────────────────────────
 let player, world, ui, phaseManager, transition;
 let startScreen, pauseScreen, gameOverScreen;
 let obstacles = [];
 
-// ── game states ─────────────────────────────────────────
-// "start" | "playing" | "paused" | "gameover"
+// ── États de jeu : "start" | "playing" | "paused" | "gameover" ─────────────
 let gameState = "start";
 let score     = 0;
 
-// ── spawn control ────────────────────────────────────────
-let spawnTimer    = 0;
-let spawnEnabled  = true; // disabled during cinematic
+// ── Contrôle du spawn ────────────────────────────────────────────────────────
+let spawnTimer   = 0;
+let spawnEnabled = true;
 
-// ── visual feedback ─────────────────────────────────────
-let hitFlash   = 0;
-let healFlash  = 0;
-let scorePopup = 0;
+// ── Feedback visuel ──────────────────────────────────────────────────────────
+let hitFlash  = 0;
+let healFlash = 0;
 
-// ── speed progression ────────────────────────────────────
-// phase 1 : starts at 3.5, stays chill
-// phase 2 : bumped to 4.5, stays constant
-// phase 3 : starts at 5.5, accelerates progressively to 10
+// ── Screenshake (phase 3 + mort) ─────────────────────────────────────────────
+let screenshakeTimer     = 0;
+let screenshakeIntensity = 0;
+
+// ── Vitesses par phase ────────────────────────────────────────────────────────
 const SPEED_PHASE1     = 3.5;
 const SPEED_PHASE2     = 4.5;
 const SPEED_PHASE3_MIN = 5.5;
@@ -37,30 +36,44 @@ const SPEED_PHASE3_MAX = 10;
 let   phase3AccelTimer = 0;
 
 function preload() {
-  spritesheet    = loadImage('assets/sprites/player/tilemap-characters.png');
-  deadImg        = loadImage('assets/sprites/player/player_dead.png');
-  characterSheet = loadImage('assets/sprites/player/tilemap-characters.png');
-  tileSheet      = loadImage('assets/sprites/obstacles/tilemap.png');
-  diamondGood    = loadImage('assets/sprites/obstacles/diamond_good.png');
-  diamondBad     = loadImage('assets/sprites/obstacles/diamond_bad.png');
-  bgImg          = loadImage('assets/backgrounds/backgroundColorForest.png');
-  bgImg2         = loadImage('assets/backgrounds/backgroundColorForest_phase2.png');
-  bgImg3         = loadImage('assets/backgrounds/backgroundColorForest_phase3.png');
-  sunImg         = loadImage('assets/backgrounds/sun.png');
-  moonImg        = loadImage('assets/backgrounds/moonFull.png');
-  hutImg         = loadImage('assets/backgrounds/hut.png');
-  soundJump       = loadSound('assets/sounds/jump.mp3');
-  soundHurt       = loadSound('assets/sounds/hurt.mp3');
-  soundTransition = loadSound('assets/sounds/transition.mp3');
-  soundBreathing  = loadSound('assets/sounds/phase3_breathing.mp3');
-  musicPhase1     = loadSound('assets/sounds/phase1.mp3');
-  musicPhase2     = loadSound('assets/sounds/phase2.mp3');
-  musicPhase3     = loadSound('assets/sounds/phase3.mp3');
+  spritesheet    = loadImage("assets/sprites/player/tilemap-characters.png");
+  deadImg        = loadImage("assets/sprites/player/player_dead.png");
+  spotlightImg   = loadImage("assets/backgrounds/spotlight.png");
+  characterSheet = loadImage("assets/sprites/player/tilemap-characters.png");
+  tileSheet      = loadImage("assets/sprites/obstacles/tilemap.png");
+  diamondGood    = loadImage("assets/sprites/obstacles/diamond_good.png");
+  diamondBad     = loadImage("assets/sprites/obstacles/diamond_bad.png");
+  bgImg          = loadImage("assets/backgrounds/backgroundColorForest.png");
+  bgImg2         = loadImage("assets/backgrounds/backgroundColorForest_phase2.png");
+  bgImg3         = loadImage("assets/backgrounds/backgroundColorForest_phase3.png");
+  sunImg         = loadImage("assets/backgrounds/sun.png");
+  moonImg        = loadImage("assets/backgrounds/moonFull.png");
+  hutImg         = loadImage("assets/backgrounds/hut.png");
+  soundJump       = loadSound("assets/sounds/jump.mp3");
+  soundHurt       = loadSound("assets/sounds/hurt.mp3");
+  soundTransition = loadSound("assets/sounds/transition.mp3");
+  soundBreathing  = loadSound("assets/sounds/phase3_breathing.mp3");
+  musicPhase1     = loadSound("assets/sounds/phase1.mp3");
+  musicPhase2     = loadSound("assets/sounds/phase2.mp3");
+  musicPhase3     = loadSound("assets/sounds/phase3.mp3");
 }
 
 function setup() {
   let canvas = createCanvas(800, 400);
-  canvas.parent('game-container');
+  canvas.parent("game-container");
+
+  // ── FIX BUG TOUCHE P ──────────────────────────────────────────────────────
+  // P5.js capture le canvas mais pas toujours le focus clavier.
+  // On force le focus sur le canvas dès le setup ET à chaque clic sur la page.
+  canvas.elt.setAttribute("tabindex", "0");
+  canvas.elt.focus();
+  document.addEventListener("click", () => canvas.elt.focus());
+  // On désactive aussi la propagation des touches qui pourraient être
+  // interceptées par le navigateur (ex: flèches qui scrollent la page)
+  canvas.elt.addEventListener("keydown", e => {
+    if ([32, 37, 38, 39, 40].includes(e.keyCode)) e.preventDefault();
+  });
+
   startScreen    = new StartScreen();
   pauseScreen    = new PauseScreen();
   gameOverScreen = new GameOverScreen();
@@ -68,97 +81,120 @@ function setup() {
 }
 
 function _initGame() {
-  player        = new Player();
-  world         = new World();
-  ui            = new UI();
-  phaseManager  = new PhaseManager();
-  transition    = new TransitionManager();
-  obstacles     = [];
-  score         = 0;
-  spawnTimer    = 0;
-  spawnEnabled  = true;
-  hitFlash      = 0;
-  healFlash     = 0;
-  scorePopup    = 0;
+  player           = new Player();
+  world            = new World();
+  ui               = new UI();
+  phaseManager     = new PhaseManager();
+  transition       = new TransitionManager();
+  obstacles        = [];
+  score            = 0;
+  spawnTimer       = 0;
+  spawnEnabled     = true;
+  hitFlash         = 0;
+  healFlash        = 0;
+  screenshakeTimer = 0;
+  screenshakeIntensity = 0;
   phase3AccelTimer = 0;
   world.scrollSpeed = SPEED_PHASE1;
 }
 
 function draw() {
+  // ── Écran de démarrage ──────────────────────────────────────────────────────
   if (gameState === "start") {
     startScreen.draw();
     return;
   }
 
+  // ── Pause ───────────────────────────────────────────────────────────────────
   if (gameState === "paused") {
     world.draw(phaseManager.currentPhase, bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg, tileSheet);
     player.display();
-    ui.draw(player.health, tileSheet);
-    pauseScreen.draw();
+    ui.draw(player.health, tileSheet, phaseManager.currentPhase);
+    pauseScreen.draw(score, ui.getBestScore(), phaseManager.currentPhase);
     return;
   }
 
+  // ── Game Over ───────────────────────────────────────────────────────────────
   if (gameState === "gameover") {
     gameOverScreen.draw();
     ui.drawLeaderboard(width / 2, height * 0.65 + 110);
     return;
   }
 
-  // ── STATE : PLAYING ───────────────────────────────────
+  // ── PLAYING ─────────────────────────────────────────────────────────────────
   let phase       = phaseManager.currentPhase;
-  let isCinematic = phaseManager.isCinematic();
+  let isCinematic = phaseManager.isCinematic();  // inputs bloqués ?
+  let isLocked    = player.locked;               // joueur figé (cinematic_out+)
 
-  // disable spawn during cinematic and clear existing obstacles
-  if (isCinematic && spawnEnabled) {
-    spawnEnabled = false;
-    obstacles    = []; // clear all obstacles during transition
-  }
-  if (!isCinematic && !spawnEnabled) {
-    spawnEnabled = true; // re-enable spawn after cinematic
-    spawnTimer   = 0;
-  }
-
-  // progressive speed in phase 3
+  // accélération progressive en phase 3
   if (phase === 3 && !isCinematic) {
     phase3AccelTimer++;
-    // accelerate every 120 frames until max speed
     if (phase3AccelTimer % 120 === 0) {
       world.scrollSpeed = min(world.scrollSpeed + 0.3, SPEED_PHASE3_MAX);
     }
   }
 
-  // update and draw world
+  // ── Screenshake ─────────────────────────────────────────────────────────────
+  let shakeX = 0, shakeY = 0;
+  if (screenshakeTimer > 0) {
+    shakeX = random(-screenshakeIntensity, screenshakeIntensity);
+    shakeY = random(-screenshakeIntensity, screenshakeIntensity);
+    screenshakeTimer--;
+    screenshakeIntensity = max(0, screenshakeIntensity - 0.08);
+  }
+
+  push();
+  translate(shakeX, shakeY);
+
+  // ── Monde ───────────────────────────────────────────────────────────────────
   world.update(phase);
   world.draw(phase, bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg, tileSheet);
 
-  // spawn obstacles — only when not in cinematic
+  // ── Spawn d'obstacles ────────────────────────────────────────────────────────
   if (!phaseManager.isSpawnBlocked()) {
-  spawnTimer++;
-  let interval = phase === 1 ? 100 : phase === 2 ? 75 : 55;
-  if (spawnTimer >= interval) {
-    obstacles.push(spawnObstacle(phase));
-    spawnTimer = 0;
-  }
+    spawnTimer++;
+    let interval = phase === 1 ? 100 : phase === 2 ? 75 : 55;
+    if (spawnTimer >= interval) {
+      obstacles.push(spawnObstacle(phase));
+      spawnTimer = 0;
+    }
   }
 
-  // clear all obstacles when spawn becomes blocked
-  if (phaseManager.isSpawnBlocked() && obstacles.length > 0) {
+  // pendant cinematic_black : vider les obstacles (tout est noir de toute façon)
+  if (phaseManager.cinematicState === "cinematic_black" && obstacles.length > 0) {
     obstacles = [];
   }
 
-  // update and draw obstacles
+  // ── Obstacles ───────────────────────────────────────────────────────────────
   for (let i = obstacles.length - 1; i >= 0; i--) {
     obstacles[i].update(world.scrollSpeed);
     obstacles[i].draw(tileSheet, characterSheet, diamondGood, diamondBad);
 
-    // check collision
-    if (!player.isDead && phaseManager.checkCollision(player, obstacles[i])) {
+    // collision — désactivée quand le joueur est figé (cinématique)
+    if (!player.isDead && !isLocked && phaseManager.checkCollision(player, obstacles[i])) {
       let effect = obstacles[i].getEffect(phase);
       player.health = constrain(player.health + effect.hp, 0, 9);
-      score        += effect.score;
-      if (effect.hp    < 0) { hitFlash = 20; if (soundHurt.isLoaded()) soundHurt.play(); }
-      if (effect.hp    > 0) healFlash  = 20;
-      if (effect.score > 0) scorePopup = 40;
+
+      // score avec multiplicateur de phase
+      let mult = phase;
+      score += effect.score * mult;
+
+      // popup de feedback positionné sur l'obstacle
+      let ox = obstacles[i].x;
+      let oy = obstacles[i].y;
+      if (effect.hp < 0) {
+        hitFlash = 15;
+        if (soundHurt.isLoaded()) soundHurt.play();
+        ui.addPopup(ox, oy, effect.hp + " HP", "damage");
+      }
+      if (effect.hp > 0) {
+        healFlash = 15;
+        ui.addPopup(ox, oy, "+" + effect.hp + " HP", "heal");
+      }
+      if (effect.score > 0) {
+        ui.addPopup(ox, oy, "+" + (effect.score * mult), "score");
+      }
+
       obstacles.splice(i, 1);
       continue;
     }
@@ -166,38 +202,44 @@ function draw() {
     if (obstacles[i].isOffScreen()) obstacles.splice(i, 1);
   }
 
-  // update and draw player
-  if (!player.isDead && !isCinematic) {
-    player.update();
-    score += phaseManager.getScoreRate();
+  // ── Joueur ───────────────────────────────────────────────────────────────────
+  if (!player.isDead) {
+    // update(lockInputs) :
+    //   - pre_cinematic / wait_landing : joueur libre (lockInputs = false)
+    //   - cinematic_out / black / in   : joueur figé (lockInputs = true)
+    player.update(isCinematic || isLocked);
+
+    // score de survie uniquement hors cinématique
+    if (!isCinematic && !isLocked) {
+      score += phaseManager.getScoreRate() * phase;
+    }
   }
   player.display();
 
-  // check game over
+  // ── Détection mort ───────────────────────────────────────────────────────────
   if (player.health <= 0 && !player.isDead) {
     player.isDead = true;
-    // use a flag instead of setTimeout to avoid multiple triggers
     if (!player.deathHandled) {
-      player.deathHandled = true;
+      player.deathHandled  = true;
+      player.deathTimer    = 0;
+      screenshakeTimer     = 40;
+      screenshakeIntensity = 5;
       let finalScore = Math.floor(score);
       ui.saveScore(finalScore);
       gameOverScreen.setStats(finalScore, phaseManager.distance, phaseManager.currentPhase);
-      // delay game over screen by 90 frames using a counter
     }
   }
 
-  // delayed game over — count 90 frames after death
+  // délai 90 frames avant l'écran game over
   if (player.isDead && player.deathHandled) {
-    player.deathTimer = (player.deathTimer || 0) + 1;
-    if (player.deathTimer >= 90) {
-      gameState = "gameover";
-    }
+    player.deathTimer++;
+    if (player.deathTimer >= 90) gameState = "gameover";
   }
 
-  // update phase manager
+  // ── Phase Manager ────────────────────────────────────────────────────────────
   phaseManager.update(player, world, transition, ui);
 
-  // draw cinematic black overlay
+  // ── Overlay noir cinématique ──────────────────────────────────────────────────
   let alpha = phaseManager.getCinematicAlpha();
   if (alpha > 0) {
     noStroke();
@@ -205,81 +247,103 @@ function draw() {
     rect(0, 0, width, height);
   }
 
-  // red flash on damage
+  // contenu cinématique (fond + lune ou éclairs + texte machine à écrire)
+  phaseManager.drawCinematic();
+
+  // ── Flash dégâts / soin ───────────────────────────────────────────────────────
   if (hitFlash > 0) {
     noStroke();
-    fill(255, 0, 0, map(hitFlash, 0, 20, 0, 100));
+    fill(255, 0, 0, map(hitFlash, 0, 15, 0, 90));
     rect(0, 0, width, height);
     hitFlash--;
   }
-
-  // green flash on heal
   if (healFlash > 0) {
     noStroke();
-    fill(0, 255, 100, map(healFlash, 0, 20, 0, 80));
+    fill(0, 255, 100, map(healFlash, 0, 15, 0, 70));
     rect(0, 0, width, height);
     healFlash--;
   }
 
-  // score popup on points gain
-  if (scorePopup > 0) {
-    push();
-    textFont("'Press Start 2P'");
-    textSize(14);
-    fill(255, 255, 0, map(scorePopup, 0, 40, 0, 255));
-    textAlign(CENTER);
-    text("+PTS", width / 2, height / 2 - scorePopup);
-    pop();
-    scorePopup--;
-  }
-
-  // draw UI on top
+  // ── UI ────────────────────────────────────────────────────────────────────────
   ui.update(Math.floor(score));
-  ui.draw(player.health, tileSheet);
+  ui.draw(player.health, tileSheet, phase);
 
-  // draw transition overlay
+  // overlay de transition (TransitionManager — flash de couleur)
   transition.update();
   transition.draw();
 
-  // draw phase label
+  // label de phase (haut droite)
   drawPhaseLabel();
+
+  pop(); // fin translate screenshake
 }
 
+// ── Gestion clavier ──────────────────────────────────────────────────────────
+// keyPressed() est fiable UNIQUEMENT si le canvas a le focus.
+// Le fix tabindex dans setup() garantit ça.
 function keyPressed() {
-  // start screen — ENTER starts the game and music
+  // Écran titre → ENTER démarre
   if (gameState === "start" && keyCode === ENTER) {
     gameState = "playing";
-    if (musicPhase1 && !musicPhase1.isPlaying()) {
+    if (musicPhase1 && musicPhase1.isLoaded() && !musicPhase1.isPlaying()) {
       musicPhase1.setLoop(true);
       musicPhase1.play();
     }
+    return false; // empêche comportement par défaut du navigateur
   }
 
-  // playing — P pauses and stops music
+  // En jeu → P met en pause (sauf si le joueur est mort)
   if (gameState === "playing" && (key === "p" || key === "P")) {
-    gameState = "paused";
-    if (musicPhase1.isPlaying()) musicPhase1.pause();
-    if (musicPhase2.isPlaying()) musicPhase2.pause();
-    if (musicPhase3.isPlaying()) musicPhase3.pause();
+    if (!player.isDead) {
+      gameState = "paused";
+      if (musicPhase1.isLoaded() && musicPhase1.isPlaying()) musicPhase1.pause();
+      if (musicPhase2.isLoaded() && musicPhase2.isPlaying()) musicPhase2.pause();
+      if (musicPhase3.isLoaded() && musicPhase3.isPlaying()) musicPhase3.pause();
+    }
+    return false;
   }
 
-  // paused — P resumes music
+  // En pause → P reprend
   if (gameState === "paused" && (key === "p" || key === "P")) {
     gameState = "playing";
-    let phase = phaseManager.currentPhase;
-    if (phase === 1 && !musicPhase1.isPlaying()) musicPhase1.play();
-    if (phase === 2 && !musicPhase2.isPlaying()) musicPhase2.play();
-    if (phase === 3 && !musicPhase3.isPlaying()) musicPhase3.play();
+    let ph = phaseManager.currentPhase;
+    if (ph === 1 && musicPhase1.isLoaded() && !musicPhase1.isPlaying()) musicPhase1.play();
+    if (ph === 2 && musicPhase2.isLoaded() && !musicPhase2.isPlaying()) musicPhase2.play();
+    if (ph === 3 && musicPhase3.isLoaded() && !musicPhase3.isPlaying()) musicPhase3.play();
+    return false;
   }
 
-  // game over — R restarts
-  if (gameState === "gameover" && (key === "r" || key === "R")) {
-    if (musicPhase1) musicPhase1.stop();
-    if (musicPhase2) musicPhase2.stop();
-    if (musicPhase3) musicPhase3.stop();
-    if (soundBreathing && soundBreathing.isPlaying()) soundBreathing.stop();
+  // En pause → R redémarre directement
+  if (gameState === "paused" && (key === "r" || key === "R")) {
+    _stopAllMusic();
     _initGame();
     gameState = "playing";
+    _startMusic();
+    return false;
+  }
+
+  // Game Over → R redémarre
+  if (gameState === "gameover" && (key === "r" || key === "R")) {
+    _stopAllMusic();
+    _initGame();
+    gameState = "playing";
+    _startMusic();
+    return false;
+  }
+
+  // Empêche les flèches de scroller la page
+  if ([32, 37, 38, 39, 40].includes(keyCode)) return false;
+}
+
+function _stopAllMusic() {
+  if (musicPhase1 && musicPhase1.isLoaded()) musicPhase1.stop();
+  if (musicPhase2 && musicPhase2.isLoaded()) musicPhase2.stop();
+  if (musicPhase3 && musicPhase3.isLoaded()) musicPhase3.stop();
+  if (soundBreathing && soundBreathing.isLoaded() && soundBreathing.isPlaying()) soundBreathing.stop();
+}
+
+function _startMusic() {
+  if (musicPhase1 && musicPhase1.isLoaded()) {
     musicPhase1.setLoop(true);
     musicPhase1.play();
   }

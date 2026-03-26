@@ -1,4 +1,4 @@
-// PhaseManager class — controls the 3 narrative phases and their rules
+// PhaseManager — phases narratives, cinématiques et règles de jeu
 
 class PhaseManager {
   constructor() {
@@ -7,39 +7,69 @@ class PhaseManager {
     this.phase2Distance  = 1800;
     this.phase3Triggered = false;
 
-    // cinematic states :
-    // "playing" | "pre_cinematic" | "cinematic_out" | "cinematic_black" | "cinematic_in" | "post_cinematic"
+    // ── Machine à états ────────────────────────────────────────────────────────
+    // "playing"         → jeu normal
+    // "pre_cinematic"   → 10 sec sans spawn, joueur LIBRE, obstacles sortent
+    // "wait_landing"    → attend que le joueur soit au sol avant de figer
+    // "cinematic_out"   → joueur FIGÉ + monde ralentit progressivement → 0
+    // "cinematic_black" → 5 sec d'animation (fond + machine à écrire)
+    // "cinematic_in"    → monde reprend vitesse, joueur déverrouillé
+    // "post_cinematic"  → 5 sec avant respawn des obstacles
     this.cinematicState = "playing";
     this.cinematicTimer = 0;
     this.pendingPhase   = 0;
 
-    this.phase2Message = "Why do you run... but above all, why do you stop?";
-    this.phase3Message = "Nothing is safe here... Everything is your enemy.";
+    // ── Machine à écrire ───────────────────────────────────────────────────────
+    this.typewriterLines  = [];
+    this.typewriterFull   = [];
+    this.typewriterIndex  = 0;
+    this.typewriterChar   = 0;
+    this.typewriterTimer  = 0;
+    this.typewriterSpeed  = 3;    // frames entre chaque lettre
+    this.typewriterDone   = false;
+    this.typewriterDoneAt = 0;
+
+    this.phase2Lines = [
+      "The sun has set.",
+      "What kept you safe...",
+      "...may now destroy you."
+    ];
+    this.phase3Lines = [
+      "NOTHING.",
+      "IS.",
+      "SAFE."
+    ];
+
+    // ── Animations cinématiques ────────────────────────────────────────────────
+    this.moonCinemaY     = 500;
+    this.moonCinemaAlpha = 0;
+    this.lightningTimer  = 0;
+    this.lightningAlpha  = 0;
   }
 
   update(player, world, transition, ui) {
     if (player.isDead) return;
 
     if (this.cinematicState !== "playing") {
-      this._updateCinematic(player, world, transition, ui);
+      this._updateCinematic(player, world);
       return;
     }
 
     this.distance++;
 
-    // trigger phase 2
+    // déclenchement phase 2 à 1800 frames de distance
     if (this.currentPhase === 1 && this.distance >= this.phase2Distance) {
       this._startCinematic(2);
     }
 
-    // show hut 900 frames before phase 3
+    // cabane apparaît 900 frames avant la fin de phase 2
     if (this.currentPhase === 2 &&
         !world.hutVisible &&
         this.distance >= this.phase2Distance + 900) {
       world.showHut();
     }
 
-    // trigger phase 3 when player reaches the hut
+    // déclenchement phase 3 quand la cabane touche le joueur
     if (this.currentPhase === 2 &&
         world.isHutReached(player.x) &&
         !this.phase3Triggered) {
@@ -49,97 +79,273 @@ class PhaseManager {
   }
 
   _startCinematic(toPhase) {
-    this.cinematicState = "pre_cinematic"; // 3 sec no spawn before anything
+    this.cinematicState = "pre_cinematic";
     this.cinematicTimer = 0;
     this.pendingPhase   = toPhase;
+
+    // reset machine à écrire
+    this.typewriterLines  = [];
+    this.typewriterFull   = toPhase === 2 ? this.phase2Lines : this.phase3Lines;
+    this.typewriterIndex  = 0;
+    this.typewriterChar   = 0;
+    this.typewriterTimer  = 0;
+    this.typewriterDone   = false;
+    this.typewriterDoneAt = 0;
+
+    if (toPhase === 2) {
+      this.moonCinemaY     = 500;
+      this.moonCinemaAlpha = 0;
+    }
+    if (toPhase === 3) {
+      this.lightningTimer = 0;
+      this.lightningAlpha = 0;
+    }
   }
 
-  _updateCinematic(player, world, transition, ui) {
+  _updateCinematic(player, world) {
     this.cinematicTimer++;
 
-    // pre_cinematic : wait 180 frames (3 sec) with no spawn, world still runs
+    // ── PRE_CINEMATIC : 10 secondes (600 frames) ─────────────────────────────
+    // spawn coupé, joueur entièrement libre, obstacles sortent naturellement
     if (this.cinematicState === "pre_cinematic") {
-      if (this.cinematicTimer >= 180) {
+      if (this.cinematicTimer >= 600) {
+        // passe en attente d'atterrissage
+        this.cinematicState = "wait_landing";
+        this.cinematicTimer = 0;
+      }
+    }
+
+    // ── WAIT_LANDING : attend que le joueur soit au sol ───────────────────────
+    // le joueur peut encore sauter librement
+    else if (this.cinematicState === "wait_landing") {
+      if (player.isOnGround) {
+        player.locked = true;
+        if (this.pendingPhase === 3) {
+          // sprite debout devant la cabane (row 0, col 0 de tilemap-characters.png)
+          player.cinematicSprite = { col: 0, row: 0 };
+        }
         this.cinematicState = "cinematic_out";
         this.cinematicTimer = 0;
       }
     }
 
-    // cinematic_out : slow down then stop world
+    // ── CINEMATIC_OUT : ralentissement progressif ─────────────────────────────
+    // joueur figé + monde ralentit sur ~120 frames (~2 sec) jusqu'à 0
     else if (this.cinematicState === "cinematic_out") {
-      world.scrollSpeed = max(0, world.scrollSpeed - 0.12);
+      world.scrollSpeed = max(0, world.scrollSpeed - 0.04);
 
-      if (this.cinematicTimer >= 60) {
-        world.scrollSpeed   = 0;
-        this.currentPhase   = this.pendingPhase;
-        this.cinematicState = "cinematic_black";
-        this.cinematicTimer = 0;
+      if (this.cinematicTimer >= 120) {
+        world.scrollSpeed = 0;
+        this.currentPhase = this.pendingPhase;
 
+        // musique de la nouvelle phase
         if (this.pendingPhase === 2) {
-          ui.showMessage(this.phase2Message);
-          showPhaseLabel(2);
-          if (typeof soundTransition !== 'undefined' && soundTransition.isLoaded()) soundTransition.play();
-          if (typeof musicPhase1 !== 'undefined') musicPhase1.stop();
-          if (typeof musicPhase2 !== 'undefined') { musicPhase2.setLoop(true); musicPhase2.play(); }
+          if (typeof soundTransition !== "undefined" && soundTransition.isLoaded()) soundTransition.play();
+          if (typeof musicPhase1 !== "undefined") musicPhase1.stop();
+          if (typeof musicPhase2 !== "undefined") { musicPhase2.setLoop(true); musicPhase2.play(); }
         }
         if (this.pendingPhase === 3) {
-          ui.showMessage(this.phase3Message);
-          showPhaseLabel(3);
-          if (typeof soundTransition !== 'undefined' && soundTransition.isLoaded()) soundTransition.play();
-          if (typeof musicPhase2 !== 'undefined') musicPhase2.stop();
-          if (typeof musicPhase3 !== 'undefined') { musicPhase3.setLoop(true); musicPhase3.play(); }
-          if (typeof soundBreathing !== 'undefined') { soundBreathing.setLoop(true); soundBreathing.play(); }
+          if (typeof soundTransition !== "undefined" && soundTransition.isLoaded()) soundTransition.play();
+          if (typeof musicPhase2 !== "undefined") musicPhase2.stop();
+          if (typeof musicPhase3 !== "undefined") { musicPhase3.setLoop(true); musicPhase3.play(); }
+          if (typeof soundBreathing !== "undefined") { soundBreathing.setLoop(true); soundBreathing.play(); }
         }
+
+        showPhaseLabel(this.pendingPhase);
+        this.cinematicState = "cinematic_black";
+        this.cinematicTimer = 0;
       }
     }
 
-    // cinematic_black : hold black screen 2.5 sec
+    // ── CINEMATIC_BLACK : 5 secondes d'animation (300 frames) ────────────────
     else if (this.cinematicState === "cinematic_black") {
-      if (this.cinematicTimer >= 150) {
+      this._updateTypewriter();
+
+      if (this.pendingPhase === 3) {
+        this._updateLightning();
+        if (typeof screenshakeTimer !== "undefined" && this.cinematicTimer % 10 === 0) {
+          screenshakeTimer     = 12;
+          screenshakeIntensity = 3;
+        }
+      }
+
+      if (this.pendingPhase === 2) {
+        this.moonCinemaY     = lerp(this.moonCinemaY, 40, 0.025);
+        this.moonCinemaAlpha = min(255, this.moonCinemaAlpha + 2);
+      }
+
+      // 300 frames minimum (5 sec), puis on attend la fin du texte
+      if (this.cinematicTimer >= 300 && this.typewriterDone) {
         this.cinematicState = "cinematic_in";
         this.cinematicTimer = 0;
       }
     }
 
-    // cinematic_in : ramp speed back up
+    // ── CINEMATIC_IN : reprise progressive de la vitesse ─────────────────────
     else if (this.cinematicState === "cinematic_in") {
       let targetSpeed = this.currentPhase === 2 ? SPEED_PHASE2 : SPEED_PHASE3_MIN;
-      world.scrollSpeed = lerp(world.scrollSpeed, targetSpeed, 0.05);
+      world.scrollSpeed = lerp(world.scrollSpeed, targetSpeed, 0.04);
 
-      if (this.cinematicTimer >= 80) {
-        world.scrollSpeed   = targetSpeed;
-        this.cinematicState = "post_cinematic"; // 1 sec no spawn after
-        this.cinematicTimer = 0;
+      if (this.cinematicTimer >= 100) {
+        world.scrollSpeed      = targetSpeed;
+        player.locked          = false;
+        player.cinematicSprite = null;
+        this.cinematicState    = "post_cinematic";
+        this.cinematicTimer    = 0;
       }
     }
 
-    // post_cinematic : wait 60 frames (1 sec) before re-enabling spawn
+    // ── POST_CINEMATIC : 5 secondes (300 frames) avant respawn ───────────────
     else if (this.cinematicState === "post_cinematic") {
-      if (this.cinematicTimer >= 60) {
+      if (this.cinematicTimer >= 300) {
         this.cinematicState = "playing";
         this.cinematicTimer = 0;
       }
     }
   }
 
-  // returns true if obstacles should NOT spawn
+  // Avance la machine à écrire lettre par lettre
+  _updateTypewriter() {
+    if (this.typewriterDone) return;
+
+    this.typewriterTimer++;
+    if (this.typewriterTimer < this.typewriterSpeed) return;
+    this.typewriterTimer = 0;
+
+    let currentLine = this.typewriterFull[this.typewriterIndex];
+
+    if (this.typewriterLines.length <= this.typewriterIndex) {
+      this.typewriterLines.push("");
+    }
+
+    if (this.typewriterChar < currentLine.length) {
+      this.typewriterLines[this.typewriterIndex] += currentLine[this.typewriterChar];
+      this.typewriterChar++;
+    } else {
+      // pause de 40 frames entre les lignes
+      this.typewriterTimer = -40;
+      this.typewriterIndex++;
+      this.typewriterChar = 0;
+
+      if (this.typewriterIndex >= this.typewriterFull.length) {
+        this.typewriterDone  = true;
+        this.typewriterDoneAt = this.cinematicTimer;
+      }
+    }
+  }
+
+  // Éclairs aléatoires (cinématique phase 3)
+  _updateLightning() {
+    this.lightningTimer++;
+    if (this.lightningAlpha > 0) this.lightningAlpha -= 12;
+    if (this.lightningTimer % 45 === 0 && random() < 0.65) {
+      this.lightningAlpha = 220;
+    }
+  }
+
+  // ── Rendu cinématique ─────────────────────────────────────────────────────
+  drawCinematic() {
+    if (this.cinematicState !== "cinematic_black") return;
+    if (this.pendingPhase === 2) this._drawCinematic2();
+    else if (this.pendingPhase === 3) this._drawCinematic3();
+  }
+
+  _drawCinematic2() {
+    noStroke();
+    fill(10, 5, 40);
+    rect(0, 0, width, height);
+
+    // étoiles
+    randomSeed(42);
+    fill(255, 255, 255, 180);
+    noStroke();
+    for (let i = 0; i < 60; i++) {
+      ellipse(random(width), random(height * 0.7), random(1, 3));
+    }
+    randomSeed();
+
+    // lune montante
+    if (typeof moonImg !== "undefined") {
+      tint(255, this.moonCinemaAlpha);
+      image(moonImg, width / 2 - 40, this.moonCinemaY, 80, 80);
+      noTint();
+    }
+
+    this._drawTypewriterText(color(200, 200, 255), color(150, 130, 220));
+  }
+
+  _drawCinematic3() {
+    noStroke();
+    fill(30, 0, 0);
+    rect(0, 0, width, height);
+
+    // vignette rouge
+    for (let r = 0; r < 8; r++) {
+      fill(120, 0, 0, 20 + r * 8);
+      noStroke();
+      rect(r * 10, r * 5, width - r * 20, height - r * 10, 4);
+    }
+
+    // éclair
+    if (this.lightningAlpha > 0) {
+      noStroke();
+      fill(255, 200, 200, this.lightningAlpha);
+      rect(0, 0, width, height);
+    }
+
+    this._drawTypewriterText(color(255, 60, 60), color(255, 120, 120));
+  }
+
+  _drawTypewriterText(mainColor, cursorColor) {
+    push();
+    textFont("'Press Start 2P'");
+    textAlign(CENTER, CENTER);
+    noStroke();
+
+    let sz         = this.pendingPhase === 3 ? 22 : 12;
+    let lineHeight = this.pendingPhase === 3 ? 44 : 30;
+    let startY     = height / 2 - (this.typewriterFull.length * lineHeight) / 2;
+
+    textSize(sz);
+
+    for (let i = 0; i < this.typewriterLines.length; i++) {
+      let line = this.typewriterLines[i];
+
+      // ombre
+      fill(0, 0, 0, 130);
+      text(line, width / 2 + 2, startY + i * lineHeight + 2);
+
+      // texte
+      fill(mainColor);
+      text(line, width / 2, startY + i * lineHeight);
+
+      // curseur clignotant sur la ligne en cours
+      if (i === this.typewriterIndex && !this.typewriterDone && frameCount % 30 < 15) {
+        fill(cursorColor);
+        text("_", width / 2 + textWidth(line) / 2 + 8, startY + i * lineHeight);
+      }
+    }
+    pop();
+  }
+
+  // ── Getters ───────────────────────────────────────────────────────────────
+
   isSpawnBlocked() {
-    return this.cinematicState === "pre_cinematic"  ||
-           this.cinematicState === "cinematic_out"  ||
-           this.cinematicState === "cinematic_black"||
-           this.cinematicState === "cinematic_in"   ||
-           this.cinematicState === "post_cinematic";
+    return this.cinematicState !== "playing";
   }
 
   getCinematicAlpha() {
-    if (this.cinematicState === "cinematic_out")    return map(this.cinematicTimer, 0, 60, 0, 255);
-    if (this.cinematicState === "cinematic_black")  return 255;
-    if (this.cinematicState === "cinematic_in")     return map(this.cinematicTimer, 0, 80, 255, 0);
+    if (this.cinematicState === "cinematic_out")   return map(this.cinematicTimer, 0, 120, 0, 255);
+    if (this.cinematicState === "cinematic_black") return 255;
+    if (this.cinematicState === "cinematic_in")    return map(this.cinematicTimer, 0, 100, 255, 0);
     return 0;
   }
 
+  // true quand le joueur ne doit plus recevoir les inputs
   isCinematic() {
-    return this.cinematicState !== "playing" && this.cinematicState !== "post_cinematic";
+    return this.cinematicState === "cinematic_out"   ||
+           this.cinematicState === "cinematic_black" ||
+           this.cinematicState === "cinematic_in";
   }
 
   checkCollision(player, obstacle) {
@@ -150,16 +356,14 @@ class PhaseManager {
     let margin = 6;
 
     return (
-      player.x + margin             < obstacle.x + ow   &&
-      player.x + player.width - margin > obstacle.x     &&
-      playerY  + margin             < obstacle.y + oh   &&
+      player.x + margin               < obstacle.x + ow  &&
+      player.x + player.width - margin > obstacle.x      &&
+      playerY  + margin               < obstacle.y + oh  &&
       playerY  + playerHeight - margin > obstacle.y
     );
   }
 
   getScoreRate() {
-    if (this.currentPhase === 1) return 1;
-    if (this.currentPhase === 2) return 2;
-    return 3;
+    return 1;
   }
 }

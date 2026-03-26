@@ -26,11 +26,7 @@ class World {
   }
 
   update(phase) {
-    // scroll ground
-    this.groundOffset -= this.scrollSpeed;
-    if (this.groundOffset <= -this.tileSize) {
-      this.groundOffset = 0;
-    }
+    // pas de défilement du sol — ground fixe
 
     // parallax — background moves at 20% of scroll speed
     this.bgOffset -= this.scrollSpeed * 0.2;
