@@ -2,28 +2,40 @@
 
 class Obstacle {
   constructor(type, x) {
-    this.type        = type;
-    this.x           = x;
-    this.width       = 18;
-    this.height      = 18;
-    this.y           = this.getYPosition();
-    this.frame       = 0;
-    this.frameTimer  = 0;
+    this.type          = type;
+    this.x             = x;
+    this.width         = 18;
+    this.height        = 18;
+    this.y             = this.getYPosition();
+    this.frame         = 0;
+    this.frameTimer    = 0;
     this.frameInterval = 10;
   }
 
-  // set vertical position — collectibles vary in height
+  // three strict heights matching player states :
+  // 302 = ground  → player does nothing
+  // 270 = mid     → player must jump
+  // 240 = high    → player must jump higher OR crouch (barrier_high only)
   getYPosition() {
-    if (this.type === "barrier_high") return 275;
+  // barrier_high — flying enemy — player must crouch
+  if (this.type === "barrier_high") return 275;
 
-    // collectibles spawn at varied heights for more challenge
-    if (this.type === "coin" || this.type === "diamond_good" || this.type === "diamond_bad") {
-      let heights = [302, 280, 260]; // ground / mid / high
-      return heights[Math.floor(Math.random() * heights.length)];
-    }
+  // barrier_low — ground level — player must jump
+  if (this.type === "barrier_low") return 302;
 
-    return 302; // ground level for spikes and barriers
+  // spike — always on the ground
+  if (this.type === "spike") return 302;
+
+  // collectibles — 3 heights :
+  // 302 = ground  → player does nothing
+  // 260 = mid     → player must jump to collect
+  if (this.type === "coin" || this.type === "diamond_good" || this.type === "diamond_bad") {
+    let heights = [302, 302, 260]; // ground twice as likely
+    return heights[Math.floor(Math.random() * heights.length)];
   }
+
+  return 302;
+}
 
   update(speed) {
     this.x -= speed;
@@ -39,8 +51,8 @@ class Obstacle {
   }
 
   draw(tileSheet, characterSheet, diamondGood, diamondBad) {
-    // tilemap step   = 19px (18px + 1px spacing)
-    // character step = 25px (24px + 1px spacing)
+    // tilemap step   = 19px (18px tile + 1px spacing)
+    // character step = 25px (24px tile + 1px spacing)
 
     if (this.type === "coin") {
       image(tileSheet, this.x, this.y, 18, 18, 11 * 19, 7 * 19, 18, 18);
@@ -64,26 +76,32 @@ class Obstacle {
     }
   }
 
+  // HP and score effects — clearly balanced per phase
   getEffect(phase) {
     if (this.type === "coin") {
+      // phase 1 : reward | phase 2-3 : danger
       if (phase === 1) return { hp: 0,  score: 10 };
       if (phase === 2) return { hp: -3, score: 0  };
       if (phase === 3) return { hp: -3, score: 0  };
     }
     if (this.type === "spike") {
+      // phase 1 : danger | phase 2 : heals (rule inversion) | phase 3 : danger
       if (phase === 1) return { hp: -3, score: 0 };
       if (phase === 2) return { hp: 3,  score: 5 };
       if (phase === 3) return { hp: -3, score: 0 };
     }
     if (this.type === "diamond_good") {
+      // phase 1 : heals | phase 2 : danger | phase 3 : heals + bonus
       if (phase === 1) return { hp: 3,  score: 0 };
       if (phase === 2) return { hp: -3, score: 0 };
       if (phase === 3) return { hp: 3,  score: 5 };
     }
     if (this.type === "diamond_bad") {
+      // phase 3 only — heavy damage
       return { hp: -6, score: 0 };
     }
     if (this.type === "barrier_low" || this.type === "barrier_high") {
+      // barriers always deal damage — same in every phase
       return { hp: -3, score: 0 };
     }
     return { hp: 0, score: 0 };
@@ -94,21 +112,40 @@ class Obstacle {
   }
 }
 
-// spawn obstacle based on phase — chains certain obstacles
+// spawn obstacle based on phase with balanced weights
 function spawnObstacle(phase) {
   let types;
 
   if (phase === 1) {
-    types = ["coin", "coin", "spike", "diamond_good", "barrier_low", "barrier_high"];
+    // phase 1 — chill introduction, lots of coins
+    types = [
+      "coin", "coin", "coin",
+      "spike",
+      "diamond_good", "diamond_good",
+      "barrier_low",
+      "barrier_high"
+    ];
   } else if (phase === 2) {
-    // more spikes and barriers in phase 2
-    types = ["coin", "spike", "spike", "diamond_good", "barrier_low", "barrier_high", "barrier_high"];
+    // phase 2 — more spikes (they heal now), fewer coins (they hurt)
+    // player should learn to chase spikes and avoid coins
+    types = [
+      "coin",
+      "spike", "spike", "spike",
+      "diamond_good",
+      "barrier_low", "barrier_low",
+      "barrier_high"
+    ];
   } else {
-    // phase 3 — more danger, diamond_bad appears more often
-    types = ["coin", "spike", "diamond_good", "diamond_bad", "diamond_bad",
-             "barrier_low", "barrier_high", "barrier_low"];
+    // phase 3 — chaos, diamond_bad introduced, high density
+    types = [
+      "coin",
+      "spike", "spike",
+      "diamond_good",
+      "diamond_bad", "diamond_bad",
+      "barrier_low", "barrier_low",
+      "barrier_high"
+    ];
   }
 
-  const randomType = types[Math.floor(Math.random() * types.length)];
-  return new Obstacle(randomType, 820);
+  return new Obstacle(types[Math.floor(Math.random() * types.length)], 820);
 }
