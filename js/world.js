@@ -6,13 +6,13 @@ class World {
     this.scrollSpeed = 5;
     this.tileSize    = 18;
 
-    // défilement du sol — synchronisé avec scrollSpeed (même vitesse que les obstacles)
+    // ground scrolling — synced with scrollSpeed (same speed as obstacles)
     this.groundOffset = 0;
 
-    // parallax du fond — 25% de la vitesse du sol
+    // background parallax — 25% of ground speed
     this.bgOffset = 0;
 
-    // nuages
+    // clouds
     this.clouds = [
       { x: 80,  y: 40,  w: 90,  h: 30, spd: 0.3  },
       { x: 300, y: 25,  w: 70,  h: 24, spd: 0.2  },
@@ -20,28 +20,28 @@ class World {
       { x: 700, y: 30,  w: 80,  h: 28, spd: 0.25 },
     ];
 
-    // cabane — déclencheur phase 3
+    // hut — phase 3 trigger
     this.hutX       = 900;
     this.hutVisible = false;
   }
 
   update(phase) {
-    // sol défile à la même vitesse que les obstacles
+    // ground scrolls at the same speed as obstacles
     this.groundOffset -= this.scrollSpeed;
     if (this.groundOffset <= -this.tileSize) {
-      this.groundOffset += this.tileSize; // wrap propre
+      this.groundOffset += this.tileSize; // clean wrap
     }
 
-    // parallax fond — 25% de la vitesse du sol
+    // background parallax — 25% of ground speed
     this.bgOffset -= this.scrollSpeed * 0.25;
 
-    // nuages
+    // clouds adapt their speed to scrollSpeed
     this.clouds.forEach(c => {
-      c.x -= c.spd * (this.scrollSpeed / 3.5); // nuages s'adaptent à la vitesse
+      c.x -= c.spd * (this.scrollSpeed / 3.5);
       if (c.x + c.w < 0) c.x = width + 10;
     });
 
-    // cabane
+    // hut
     if (this.hutVisible) {
       this.hutX -= this.scrollSpeed;
     }
@@ -69,7 +69,7 @@ class World {
   _drawSky(phase) {
     let topColor, bottomColor;
     if (phase === 1) {
-      topColor    = color(10, 20, 80);   // bleu nuit saturé arcade
+      topColor    = color(10, 20, 80);   // saturated arcade navy blue
       bottomColor = color(30, 80, 180);
     } else if (phase === 2) {
       topColor    = color(10, 0, 40);
@@ -126,12 +126,12 @@ class World {
 
   _drawGround(phase, tileSheet) {
     noTint();
-    // rangée herbe — défile avec groundOffset
+    // grass row — scrolls with groundOffset
     for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
       image(tileSheet, x, this.groundY, this.tileSize, this.tileSize,
         2 * 19, 1 * 19, 18, 18);
     }
-    // rangées terre dessous
+    // dirt rows below
     for (let y = this.groundY + this.tileSize; y < height; y += this.tileSize) {
       for (let x = this.groundOffset; x < width + this.tileSize; x += this.tileSize) {
         image(tileSheet, x, y, this.tileSize, this.tileSize,
@@ -140,16 +140,16 @@ class World {
     }
   }
 
-  // Effet CRT : scanlines + vignette + légère aberration chromatique sur les bords
+  // CRT effect: scanlines + vignette + slight chromatic aberration on edges
   _drawCRTOverlay(phase) {
-    // scanlines — une ligne sombre sur deux
+    // scanlines — one dark line every two pixels
     noStroke();
     for (let y = 0; y < height; y += 2) {
       fill(0, 0, 0, 35);
       rect(0, y, width, 1);
     }
 
-    // vignette arrondie — plus intense selon la phase
+    // rounded vignette — more intense with each phase
     let vigIntensity = phase === 1 ? 120 : phase === 2 ? 160 : 200;
     for (let i = 0; i < 5; i++) {
       let margin = i * 18;
@@ -158,7 +158,7 @@ class World {
       rect(margin, margin, width - margin * 2, height - margin * 2, 8);
     }
 
-    // léger bruit pixel en phase 3
+    // slight pixel noise in phase 3
     if (phase === 3) {
       randomSeed(frameCount * 7);
       for (let i = 0; i < 12; i++) {

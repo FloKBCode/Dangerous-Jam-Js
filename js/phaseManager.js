@@ -1,4 +1,4 @@
-// PhaseManager — phases narratives, cinématiques et règles de jeu
+// PhaseManager — narrative phases, cinematics and game rules
 
 class PhaseManager {
   constructor() {
@@ -6,29 +6,29 @@ class PhaseManager {
     this.distance        = 0;
 
     // Phase 1 : 1800 frames
-    // Phase 2 : 3600 frames (2x phase 1), cabane 20 sec (1200f) avant la fin
+    // Phase 2 : 3600 frames (2x phase 1), hut appears 20 sec (1200f) before the end
     this.phase2Distance  = 1800;
     this.phase2Duration  = 3600;
     this.phase3Triggered = false;
 
-    // ── Machine à états ────────────────────────────────────────────────────────
-    // "playing"         → jeu normal
-    // "pre_cinematic"   → spawn coupé, joueur LIBRE, obstacles sortent
-    //                     Phase 2 : 7 sec (420f) | Phase 3 : 20 sec (1200f)
-    // "slowdown"        → tout ralentit progressivement (joueur + décor)
-    // "wait_landing"    → attend isOnGround avant de figer
-    // "frozen"          → tout à l'arrêt, pause de 3 sec puis cinématique
-    // "cinematic_black" → animation narrative (5 sec)
-    // "cinematic_in"    → reprise progressive
-    // "post_cinematic"  → 5 sec avant respawn
+    // ── State machine ──────────────────────────────────────────────────────────
+    // "playing"         → normal gameplay
+    // "pre_cinematic"   → spawn blocked, player FREE, obstacles scroll out
+    //                     Phase 2: 7 sec (420f) | Phase 3: 20 sec (1200f)
+    // "slowdown"        → everything slows down progressively (player + world)
+    // "wait_landing"    → waits for isOnGround before freezing
+    // "frozen"          → everything stopped, 3 sec pause then cinematic
+    // "cinematic_black" → narrative animation (5 sec)
+    // "cinematic_in"    → progressive resume
+    // "post_cinematic"  → 5 sec before respawn
     this.cinematicState = "playing";
     this.cinematicTimer = 0;
     this.pendingPhase   = 0;
 
-    // vitesse mémorisée avant le ralentissement (pour la reprise)
+    // speed saved before slowdown (used for resume ramp)
     this.speedBeforeSlowdown = 0;
 
-    // ── Machine à écrire ───────────────────────────────────────────────────────
+    // ── Typewriter ─────────────────────────────────────────────────────────────
     this.typewriterLines  = [];
     this.typewriterFull   = [];
     this.typewriterIndex  = 0;
@@ -66,15 +66,15 @@ class PhaseManager {
 
     this.distance++;
 
-    // ── Déclenchement phase 2 ─────────────────────────────────────────────────
+    // ── Trigger phase 2 ───────────────────────────────────────────────────────
     if (this.currentPhase === 1 && this.distance >= this.phase2Distance) {
       this._startCinematic(2);
       return;
     }
 
-    // ── Phase 2 en cours ──────────────────────────────────────────────────────
-    // La phase 3 se déclenche par distance (phase2Distance + phase2Duration)
-    // La cabane est spawnée au début du slowdown au bon endroit — pas ici
+    // ── Phase 2 in progress ───────────────────────────────────────────────────
+    // Phase 3 is triggered by distance (phase2Distance + phase2Duration)
+    // The hut is spawned at the start of slowdown at the right position — not here
     if (this.currentPhase === 2) {
       let phase2Elapsed = this.distance - this.phase2Distance;
       if (phase2Elapsed >= this.phase2Duration) {
@@ -88,9 +88,9 @@ class PhaseManager {
     this.cinematicState      = "pre_cinematic";
     this.cinematicTimer      = 0;
     this.pendingPhase        = toPhase;
-    this.speedBeforeSlowdown = 0; // sera capturé au début du slowdown
+    this.speedBeforeSlowdown = 0; // will be captured at the start of slowdown
 
-    // reset machine à écrire
+    // reset typewriter
     this.typewriterLines  = [];
     this.typewriterFull   = toPhase === 2 ? this.phase2Lines : this.phase3Lines;
     this.typewriterIndex  = 0;
@@ -113,32 +113,32 @@ class PhaseManager {
     this.cinematicTimer++;
 
     // ── PRE_CINEMATIC ─────────────────────────────────────────────────────────
-    // Phase 2 : 7 sec (420f) | Phase 3 : 20 sec (1200f) — déjà géré dans update()
-    // Pendant ce temps : spawn coupé, joueur libre, obstacles sortent seuls
+    // Phase 2: 7 sec (420f) | Phase 3: 20 sec (1200f) — already handled in update()
+    // During this time: spawn blocked, player free, obstacles scroll out on their own
     if (this.cinematicState === "pre_cinematic") {
       let duration = this.pendingPhase === 2 ? 420 : 1200;
       if (this.cinematicTimer >= duration) {
-        // mémorise la vitesse actuelle
+        // save current speed
         this.speedBeforeSlowdown = world.scrollSpeed;
         this.cinematicState = "slowdown";
         this.cinematicTimer = 0;
       }
     }
 
-    // ── SLOWDOWN : ralentissement progressif de tout (~3 sec = 180f) ──────────
-    // Le monde ralentit, le joueur aussi (ses frames de course ralentissent via scrollSpeed)
+    // ── SLOWDOWN: progressive deceleration of everything (~3 sec = 180f) ──────
+    // World slows down, player too (run frames slow via scrollSpeed)
     else if (this.cinematicState === "slowdown") {
-      // première frame du slowdown : spawn la cabane au bon endroit pour phase 3
-      // Calcul : pendant 180f de décélération de vitesse V à 0, distance = V/2 * 180
-      // La cabane doit s'arrêter à playerX(100) + 60px = 160
-      // Donc hutX initial = 160 + distance_slowdown = 160 + (speedBeforeSlowdown/2)*180
+      // first frame of slowdown: spawn the hut at the right position for phase 3
+      // Calculation: over 180f of deceleration from speed V to 0, distance = V/2 * 180
+      // The hut must stop at playerX(100) + 60px = 160
+      // So hutX initial = 160 + slowdown_distance = 160 + (speedBeforeSlowdown/2)*180
       if (this.pendingPhase === 3 && this.cinematicTimer === 1) {
         let distSlowdown = (this.speedBeforeSlowdown / 2) * 180;
         world.hutX       = 160 + distSlowdown;
         world.hutVisible = true;
       }
 
-      // décélération douce sur 180 frames
+      // smooth deceleration over 180 frames
       world.scrollSpeed = max(0, world.scrollSpeed - (this.speedBeforeSlowdown / 180));
 
       if (this.cinematicTimer >= 180) {
@@ -148,7 +148,7 @@ class PhaseManager {
       }
     }
 
-    // ── WAIT_LANDING : attend que le joueur touche le sol ─────────────────────
+    // ── WAIT_LANDING: waits for player to touch the ground ───────────────────
     else if (this.cinematicState === "wait_landing") {
       if (player.isOnGround) {
         player.locked = true;
@@ -160,13 +160,13 @@ class PhaseManager {
       }
     }
 
-    // ── FROZEN : tout à l'arrêt, pause de 3 sec (180f) ───────────────────────
+    // ── FROZEN: everything stopped, 3 sec pause (180f) ───────────────────────
     else if (this.cinematicState === "frozen") {
-      // rien ne bouge — on attend 3 secondes
+      // nothing moves — wait 3 seconds
       if (this.cinematicTimer >= 180) {
         this.currentPhase = this.pendingPhase;
 
-        // musique
+        // music
         if (this.pendingPhase === 2) {
           if (typeof soundTransition !== "undefined" && soundTransition.isLoaded()) soundTransition.play();
           if (typeof musicPhase1 !== "undefined") musicPhase1.stop();
@@ -185,7 +185,7 @@ class PhaseManager {
       }
     }
 
-    // ── CINEMATIC_BLACK : 5 sec d'animation (300f) ───────────────────────────
+    // ── CINEMATIC_BLACK: 5 sec of animation (300f) ───────────────────────────
     else if (this.cinematicState === "cinematic_black") {
       this._updateTypewriter();
 
@@ -208,7 +208,7 @@ class PhaseManager {
       }
     }
 
-    // ── CINEMATIC_IN : reprise progressive ────────────────────────────────────
+    // ── CINEMATIC_IN: progressive resume ─────────────────────────────────────
     else if (this.cinematicState === "cinematic_in") {
       let targetSpeed = this.currentPhase === 2 ? SPEED_PHASE2 : SPEED_PHASE3_MIN;
       world.scrollSpeed = lerp(world.scrollSpeed, targetSpeed, 0.04);
@@ -222,7 +222,7 @@ class PhaseManager {
       }
     }
 
-    // ── POST_CINEMATIC : 5 sec (300f) avant respawn ──────────────────────────
+    // ── POST_CINEMATIC: 5 sec (300f) before respawn ──────────────────────────
     else if (this.cinematicState === "post_cinematic") {
       if (this.cinematicTimer >= 300) {
         this.cinematicState = "playing";
@@ -264,7 +264,7 @@ class PhaseManager {
     }
   }
 
-  // ── Rendu ─────────────────────────────────────────────────────────────────
+  // ── Rendering ─────────────────────────────────────────────────────────────
 
   drawCinematic() {
     if (this.cinematicState !== "cinematic_black") return;
@@ -350,7 +350,7 @@ class PhaseManager {
   }
 
   getCinematicAlpha() {
-    // fondu progressif pendant slowdown
+    // progressive fade during slowdown
     if (this.cinematicState === "slowdown")        return map(this.cinematicTimer, 0, 180, 0, 180);
     if (this.cinematicState === "wait_landing")    return 180;
     if (this.cinematicState === "frozen")          return map(this.cinematicTimer, 0, 180, 180, 255);
@@ -360,9 +360,9 @@ class PhaseManager {
   }
 
   isCinematic() {
-    // inputs bloqués pendant ces états
-    return this.cinematicState === "frozen"         ||
-           this.cinematicState === "cinematic_black"||
+    // inputs blocked during these states
+    return this.cinematicState === "frozen"          ||
+           this.cinematicState === "cinematic_black" ||
            this.cinematicState === "cinematic_in";
   }
 

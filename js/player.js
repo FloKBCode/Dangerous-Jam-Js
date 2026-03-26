@@ -1,4 +1,4 @@
-// Player class — mouvement, saut, accroupissement, santé et affichage
+// Player class — handles movement, jump, crouch, health and display
 
 class Player {
   constructor() {
@@ -16,23 +16,23 @@ class Player {
     this.runFrame    = 0;
     this.frameTimer  = 0;
 
-    // contrôle de mort — initialisés ici pour éviter les bugs au restart
+    // death control — initialized here to avoid bugs on restart
     this.deathHandled = false;
     this.deathTimer   = 0;
 
-    // verrou cinématique — quand true, le joueur ne peut plus sauter/s'accroupir
-    // mais la gravité continue de s'appliquer jusqu'à l'atterrissage
+    // cinematic lock — when true, player cannot jump or crouch
+    // but gravity still applies until landing
     this.locked = false;
 
-    // sprite cinématique — si non null, affiche ce sprite au lieu de l'animation normale
-    // format : { col, row } dans tilemap-characters.png
+    // cinematic sprite — if not null, displays this sprite instead of the normal animation
+    // format: { col, row } in tilemap-characters.png
     this.cinematicSprite = null;
   }
 
-  // Met à jour la physique et les inputs
-  // lockInputs : si true, ignore les touches mais applique encore la gravité
+  // Updates physics and inputs
+  // lockInputs: if true, ignores key input but still applies gravity
   update(lockInputs) {
-    // gravité toujours active (permet l'atterrissage naturel avant le freeze)
+    // gravity always active (allows natural landing before freeze)
     this.velocityY += this.gravity;
     this.y += this.velocityY;
 
@@ -43,22 +43,22 @@ class Player {
     }
 
     if (lockInputs) {
-      // inputs bloqués : pas de saut ni d'accroupissement
+      // inputs locked: no jump or crouch
       this.isCrouching = false;
       return;
     }
 
-    // saut — uniquement au sol, pas accroupi
+    // jump — only when on ground and not crouching
     if ((keyIsDown(UP_ARROW) || keyIsDown(32)) && this.isOnGround && !this.isCrouching) {
       this.velocityY  = -7;
       this.isOnGround = false;
       if (typeof soundJump !== "undefined" && soundJump.isLoaded()) soundJump.play();
     }
 
-    // accroupissement — uniquement au sol
+    // crouch — only when on ground
     this.isCrouching = (keyIsDown(DOWN_ARROW) || keyIsDown(83)) && this.isOnGround;
 
-    // animation de course
+    // run animation
     if (this.isOnGround && !this.isCrouching && !this.isDead) {
       this.frameTimer++;
       if (this.frameTimer >= 8) {
@@ -70,12 +70,12 @@ class Player {
 
   display() {
     push();
-    // miroir horizontal — le personnage fait face à droite
+    // flip sprite horizontally — character faces right
     scale(-1, 1);
     translate(-this.x * 2 - this.width, 0);
 
     if (this.isDead) {
-      // sprite mort couché (rotation 90°)
+      // dead sprite lying down (90° rotation)
       push();
       translate(this.x + 16, this.y + 16);
       rotate(HALF_PI);
@@ -83,7 +83,7 @@ class Player {
       pop();
 
     } else if (this.cinematicSprite !== null) {
-      // sprite cinématique fixe (ex : debout devant la cabane)
+      // fixed cinematic sprite (e.g. standing in front of the hut)
       let c = this.cinematicSprite.col;
       let r = this.cinematicSprite.row;
       image(characterSheet, this.x, this.y, 32, 32,
@@ -98,7 +98,7 @@ class Player {
         1 * 25, 0 * 25, 24, 24);
 
     } else {
-      // animation de course (2 frames alternées)
+      // run animation (2 alternating frames)
       image(spritesheet, this.x, this.y, 32, 32,
         this.runFrame * 25, 0 * 25, 24, 24);
     }

@@ -1,246 +1,204 @@
-// Obstacle class + système de spawn dynamique par vagues et patterns
+// formatScore — converts a number to a 6-digit zero-padded string
+function formatScore(score) {
+  return score.toString().padStart(6, "0");
+}
 
-class Obstacle {
-  constructor(type, x) {
-    this.type          = type;
-    this.x             = x;
-    this.width         = 18;
-    this.height        = 18;
-    this.y             = this.getYPosition();
-    this.baseY         = this.y;
+// UI class — score, hearts, multiplier, collision popups, phase messages
+class UI {
+  constructor() {
+    this.score           = 0;
+    this.maxHP           = 9;
+    this.phaseMessage    = "";
+    this.messageTimer    = 0;
+    this.messageDuration = 180;
+    this.messageAlpha    = 0;
 
-    // animation ennemi volant
-    this.frame         = 0;
-    this.frameTimer    = 0;
-    this.frameInterval = 10;
-
-    // rotation pièce — alternance 2 sprites
-    this.coinPhase    = 0;
-    this.coinTimer    = 0;
-    this.coinInterval = 10;
-
-    // lévitation diamonds
-    this.floatSeed = Math.random() * Math.PI * 2;
+    // collision popups positioned on the touched obstacle
+    // each popup: { x, y, text, color, timer, maxTimer }
+    this.popups = [];
   }
 
-  getYPosition() {
-    if (this.type === "barrier_high") return 275;
-    if (this.type === "barrier_low")  return 302;
-    if (this.type === "spike")        return 302;
-    if (this.type === "coin" || this.type === "diamond_good" || this.type === "diamond_bad") {
-      let heights = [302, 302, 260];
-      return heights[Math.floor(Math.random() * heights.length)];
-    }
-    return 302;
-  }
+  update(score) {
+    this.score = score;
 
-  update(speed) {
-    this.x -= speed;
-
-    if (this.type === "barrier_high") {
-      this.frameTimer++;
-      if (this.frameTimer >= this.frameInterval) {
-        this.frame = (this.frame + 1) % 3;
-        this.frameTimer = 0;
-      }
+    // phase message countdown
+    if (this.messageTimer > 0) {
+      this.messageTimer--;
+      this.messageAlpha = this.messageTimer > 60
+        ? 255
+        : map(this.messageTimer, 0, 60, 0, 255);
     }
 
-    if (this.type === "coin") {
-      this.coinTimer++;
-      if (this.coinTimer >= this.coinInterval) {
-        this.coinPhase = (this.coinPhase + 1) % 4;
-        this.coinTimer = 0;
-      }
-    }
-
-    if (this.type === "diamond_good" || this.type === "diamond_bad") {
-      this.y = this.baseY + sin(frameCount * 0.06 + this.floatSeed) * 4;
+    // popup update: rises and fades out
+    for (let i = this.popups.length - 1; i >= 0; i--) {
+      this.popups[i].timer--;
+      this.popups[i].y -= 0.6; // floats upward slowly
+      if (this.popups[i].timer <= 0) this.popups.splice(i, 1);
     }
   }
 
-  draw(tileSheet, characterSheet, diamondGood, diamondBad) {
-    if (this.type === "coin") {
-      this._drawCoin(tileSheet);
-    } else if (this.type === "spike") {
-      image(tileSheet, this.x, this.y, 18, 18, 8 * 19, 3 * 19, 18, 18);
-    } else if (this.type === "barrier_low") {
-      image(tileSheet, this.x, this.y, 18, 18, 6 * 19, 5 * 19, 18, 18);
-    } else if (this.type === "barrier_high") {
-      let col = 6 + this.frame;
-      image(characterSheet, this.x, this.y, 32, 32, col * 25, 2 * 25, 24, 24);
-    } else if (this.type === "diamond_good") {
-      image(diamondGood, this.x, this.y, 18, 18);
-    } else if (this.type === "diamond_bad") {
-      image(diamondBad, this.x, this.y, 18, 18);
-    }
+  showMessage(msg) {
+    this.phaseMessage = msg;
+    this.messageTimer = this.messageDuration;
+    this.messageAlpha = 255;
   }
 
-  // Alternance sprite face (row7,col11) / profil (row7,col11)
-  _drawCoin(tileSheet) {
+  // Adds a feedback popup at the position of the touched obstacle
+  // type: "damage" | "heal" | "score"
+  addPopup(x, y, text, type) {
+    let col;
+    if (type === "damage") col = color(255, 60, 60);
+    else if (type === "heal") col = color(80, 255, 120);
+    else col = color(255, 220, 0); // score
+
+    this.popups.push({
+      x:        x + 9,  // centered on obstacle (18px wide)
+      y:        y - 4,  // slightly above
+      text:     text,
+      col:      col,
+      timer:    45,
+      maxTimer: 45
+    });
+  }
+
+  draw(hp, tileSheet, phase) {
+    this._drawScore(phase);
+    this._drawHearts(hp, tileSheet);
+    this._drawPopups();
+    if (this.messageTimer > 0) this._drawPhaseMessage();
+    this._drawSoundButton();
+  }
+
+  // Sound/mute icon in bottom right — press M to toggle
+  _drawSoundButton() {
     push();
-    if (this.coinPhase === 0 || this.coinPhase === 1) {
-      image(tileSheet, this.x, this.y, 18, 18, 11 * 19, 7 * 19, 18, 18);
+    textFont("'Press Start 2P'");
+    textAlign(RIGHT, BOTTOM);
+    textSize(7);
+    noStroke();
+
+    // reads isMuted from the global variable in sketch.js
+    let muted = (typeof isMuted !== "undefined") ? isMuted : false;
+
+    if (muted) {
+      // mute icon: red strikethrough
+      fill(255, 60, 60, 200);
+      text("M MUTED", width - 12, height - 10);
+      // red strikethrough line
+      stroke(255, 60, 60, 200);
+      strokeWeight(1);
+      line(width - 58, height - 18, width - 48, height - 10);
     } else {
-      image(tileSheet, this.x, this.y, 18, 18, 12 * 19, 7 * 19, 18, 18);
+      // sound icon: subtle green
+      fill(80, 200, 80, 140);
+      text("M  SOUND", width - 12, height - 10);
     }
     pop();
   }
 
-  getEffect(phase) {
-    if (this.type === "coin") {
-      if (phase === 1) return { hp:  0, score: 10 };
-      if (phase === 2) return { hp: -2, score: 0  };
-      if (phase === 3) return { hp: -2, score: 0  };
-    }
-    if (this.type === "spike") {
-      if (phase === 1) return { hp: -2, score: 0 };
-      if (phase === 2) return { hp:  2, score: 5 };
-      if (phase === 3) return { hp: -2, score: 0 };
-    }
-    if (this.type === "diamond_good") {
-      if (phase === 1) return { hp:  2, score: 0 };
-      if (phase === 2) return { hp: -2, score: 0 };
-      if (phase === 3) return { hp:  2, score: 5 };
-    }
-    if (this.type === "diamond_bad") {
-      if (phase === 3) return { hp: -3, score: 0 };
-      return { hp: 0, score: 0 };
-    }
-    if (this.type === "barrier_low" || this.type === "barrier_high") {
-      return { hp: -2, score: 0 };
-    }
-    return { hp: 0, score: 0 };
+  // Score display in top left
+  _drawScore(phase) {
+    push();
+    textFont("'Press Start 2P'");
+    textSize(10);
+    fill(255, 255, 100);
+    noStroke();
+    text("SCORE: " + formatScore(this.score), 20, 25);
+    pop();
   }
 
-  isOffScreen() {
-    return this.x + this.width < 0;
-  }
-}
+  // 3 hearts (each worth 3 HP) drawn from the tilemap
+  _drawHearts(hp, tileSheet) {
+    const heartSize = 24;
+    const startX    = 20;
+    const startY    = 35;
+    const gap       = 28;
 
-// ── Système de spawn dynamique par vagues + patterns ─────────────────────────
-//
-// Un "pattern" est une séquence d'obstacles espacés avec un délai entre chaque.
-// Une "vague" = 1 à 3 patterns consécutifs, puis une pause.
-//
-// Structure : SpawnManager gère une file de patterns à exécuter.
+    for (let i = 0; i < 3; i++) {
+      const heartHP = hp - i * 3;
+      let col;
+      if (heartHP >= 3)      col = 4; // full heart
+      else if (heartHP >= 1) col = 5; // half heart
+      else                   col = 6; // empty heart
 
-class SpawnManager {
-  constructor() {
-    this.queue      = [];  // file de { type, delay } à spawner
-    this.queueTimer = 0;   // timer entre deux spawns dans la queue
-    this.waveTimer  = 0;   // timer entre deux vagues
-    this.wavePause  = 0;   // durée de pause entre vagues (frames)
-    this.inWave     = false;
-    this.lastType   = null; // évite deux du même type à la suite
-  }
-
-  // Appelé chaque frame — retourne un tableau d'obstacles à spawner (souvent vide)
-  update(phase, scrollSpeed) {
-    let toSpawn = [];
-
-    // si queue en cours : on exécute
-    if (this.queue.length > 0) {
-      this.queueTimer++;
-      if (this.queueTimer >= this.queue[0].delay) {
-        let entry = this.queue.shift();
-        this.queueTimer = 0;
-        toSpawn.push(new Obstacle(entry.type, 820));
-        this.lastType = entry.type;
-      }
-      return toSpawn;
-    }
-
-    // queue vide : on attend la fin de la pause inter-vagues
-    this.waveTimer++;
-    // pause adaptée à la phase et à la vitesse (plus vite = pause plus courte)
-    let basePause = phase === 1 ? 110 : phase === 2 ? 85 : 65;
-    basePause = Math.round(basePause * (3.5 / scrollSpeed)); // adaptatif
-    basePause = Math.max(40, basePause); // minimum 40 frames
-
-    if (this.waveTimer >= basePause) {
-      this.waveTimer = 0;
-      this._buildWave(phase);
-    }
-
-    return toSpawn;
-  }
-
-  // Construit une vague de patterns selon la phase
-  _buildWave(phase) {
-    // choisit un pattern au hasard parmi ceux disponibles pour cette phase
-    let patterns = this._getPatternsForPhase(phase);
-    let pattern  = patterns[Math.floor(Math.random() * patterns.length)];
-    this.queue   = pattern;
-  }
-
-  // Patterns par phase — chaque entrée : { type, delay }
-  // delay = frames avant de spawner CE type après le précédent
-  _getPatternsForPhase(phase) {
-    if (phase === 1) {
-      return [
-        // sol simple
-        [{ type: "coin",         delay: 0 }],
-        // sol + air rapprochés
-        [{ type: "coin",         delay: 0 }, { type: "diamond_good", delay: 45 }],
-        // deux au sol côte à côte
-        [{ type: "spike",        delay: 0 }, { type: "barrier_low",  delay: 30 }],
-        // un en l'air (joueur doit sauter)
-        [{ type: "barrier_low",  delay: 0 }],
-        // un en hauteur (joueur doit s'accroupir)
-        [{ type: "barrier_high", delay: 0 }],
-        // collectible suivi d'un piège
-        [{ type: "diamond_good", delay: 0 }, { type: "spike",        delay: 55 }],
-        // triple pièces espacées
-        [{ type: "coin",         delay: 0 }, { type: "coin",         delay: 40 }, { type: "coin", delay: 40 }],
-        // sol puis air
-        [{ type: "barrier_low",  delay: 0 }, { type: "barrier_high", delay: 60 }],
-      ];
-    } else if (phase === 2) {
-      return [
-        // spikes en rafale (ils soignent maintenant !)
-        [{ type: "spike",        delay: 0 }, { type: "spike",        delay: 35 }],
-        // piège : pièce (danger) suivie d'un spike (soin)
-        [{ type: "coin",         delay: 0 }, { type: "spike",        delay: 50 }],
-        // barrières + spike
-        [{ type: "barrier_low",  delay: 0 }, { type: "spike",        delay: 45 }],
-        // double barrière
-        [{ type: "barrier_low",  delay: 0 }, { type: "barrier_high", delay: 55 }],
-        // triple spike
-        [{ type: "spike",        delay: 0 }, { type: "spike",        delay: 40 }, { type: "spike", delay: 40 }],
-        // diamond piège (il fait mal en phase 2)
-        [{ type: "diamond_good", delay: 0 }, { type: "barrier_low",  delay: 50 }],
-        // coin piège isolé
-        [{ type: "coin",         delay: 0 }],
-        // alternance sol/air
-        [{ type: "barrier_high", delay: 0 }, { type: "spike",        delay: 50 }],
-      ];
-    } else {
-      // phase 3 — chaos max
-      return [
-        // diamond_bad en embuscade
-        [{ type: "diamond_bad",  delay: 0 }],
-        // double diamond_bad
-        [{ type: "diamond_bad",  delay: 0 }, { type: "diamond_bad",  delay: 40 }],
-        // diamond_bad + barrière
-        [{ type: "diamond_bad",  delay: 0 }, { type: "barrier_low",  delay: 45 }],
-        // triple obstacles rapprochés
-        [{ type: "barrier_low",  delay: 0 }, { type: "spike",        delay: 35 }, { type: "barrier_high", delay: 40 }],
-        // pluie de spikes
-        [{ type: "spike",        delay: 0 }, { type: "spike",        delay: 30 }, { type: "spike", delay: 30 }],
-        // coin piège + diamond_bad
-        [{ type: "coin",         delay: 0 }, { type: "diamond_bad",  delay: 50 }],
-        // barrières en rafale
-        [{ type: "barrier_high", delay: 0 }, { type: "barrier_low",  delay: 45 }, { type: "barrier_high", delay: 45 }],
-        // diamond_good soin + piège immédiat
-        [{ type: "diamond_good", delay: 0 }, { type: "diamond_bad",  delay: 40 }],
-      ];
+      image(tileSheet,
+        startX + i * gap, startY, heartSize, heartSize,
+        col * 19, 2 * 19, 18, 18
+      );
     }
   }
 
-  reset() {
-    this.queue      = [];
-    this.queueTimer = 0;
-    this.waveTimer  = 0;
-    this.lastType   = null;
+  // Floating feedback popups above touched objects
+  _drawPopups() {
+    push();
+    textFont("'Press Start 2P'");
+    textSize(8);
+    textAlign(CENTER);
+    noStroke();
+
+    for (let p of this.popups) {
+      // fade out in the last third of lifetime
+      let alpha = p.timer > p.maxTimer * 0.4
+        ? 255
+        : map(p.timer, 0, p.maxTimer * 0.4, 0, 255);
+
+      let c = p.col;
+      fill(red(c), green(c), blue(c), alpha);
+      text(p.text, p.x, p.y);
+    }
+
+    pop();
+  }
+
+  // Narrative phase transition message (centered, semi-transparent background)
+  _drawPhaseMessage() {
+    push();
+    textFont("'Press Start 2P'");
+    textSize(9);
+    textAlign(CENTER, CENTER);
+    let msgWidth = textWidth(this.phaseMessage) + 40;
+
+    fill(0, 0, 0, this.messageAlpha * 0.7);
+    noStroke();
+    rectMode(CENTER);
+    rect(width / 2, height / 2 - 40, msgWidth, 30, 4);
+
+    fill(255, 255, 255, this.messageAlpha);
+    text(this.phaseMessage, width / 2, height / 2 - 40);
+    pop();
+  }
+
+  // ── Leaderboard ───────────────────────────────────────
+
+  saveScore(score) {
+    let scores = JSON.parse(localStorage.getItem("tno_scores") || "[]");
+    scores.push(score);
+    scores.sort((a, b) => b - a);
+    scores = scores.slice(0, 5);
+    localStorage.setItem("tno_scores", JSON.stringify(scores));
+  }
+
+  getTopScores() {
+    return JSON.parse(localStorage.getItem("tno_scores") || "[]");
+  }
+
+  getBestScore() {
+    let scores = this.getTopScores();
+    return scores.length > 0 ? scores[0] : 0;
+  }
+
+  drawLeaderboard(x, y) {
+    let scores = this.getTopScores();
+    push();
+    textFont("'Press Start 2P'");
+    textAlign(CENTER);
+    textSize(11);
+    fill(255, 255, 100);
+    text("— TOP 5 —", x, y);
+    fill(180, 180, 180);
+    for (let i = 0; i < scores.length; i++) {
+      text((i + 1) + ".  " + formatScore(scores[i]), x, y + 24 + i * 22);
+    }
+    pop();
   }
 }

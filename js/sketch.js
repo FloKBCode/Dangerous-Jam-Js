@@ -1,4 +1,4 @@
-// sketch.js — boucle principale P5.js
+// Main P5.js file — contains setup() and draw(), the core game loop
 
 let spritesheet, deadImg, spotlightImg;
 let tileSheet, characterSheet, diamondGood, diamondBad;
@@ -16,7 +16,7 @@ let score     = 0;
 let hitFlash  = 0;
 let healFlash = 0;
 
-// son — muet ou non
+// sound — muted or not
 let isMuted = false;
 
 let screenshakeTimer     = 0;
@@ -55,7 +55,7 @@ function setup() {
   let canvas = createCanvas(800, 400);
   canvas.parent("game-container");
 
-  // Fix focus clavier
+  // fix keyboard focus on canvas
   canvas.elt.setAttribute("tabindex", "0");
   canvas.elt.focus();
   document.addEventListener("click", () => canvas.elt.focus());
@@ -111,12 +111,12 @@ function draw() {
   let isCinematic = phaseManager.isCinematic();
   let isLocked    = player.locked;
 
-  // accélération phase 3
+  // phase 3 progressive speed increase
   if (phase === 3 && !isCinematic && !isLocked) {
     phase3AccelTimer++;
     if (phase3AccelTimer % 120 === 0) {
       world.scrollSpeed = min(world.scrollSpeed + 0.3, SPEED_PHASE3_MAX);
-      spawnManager.reset(); // remet à zéro pour adapter les pauses à la nouvelle vitesse
+      spawnManager.reset(); // reset to adapt spawn gaps to new speed
     }
   }
 
@@ -143,7 +143,7 @@ function draw() {
     spawnManager.reset();
   }
 
-  // vider pendant cinematic_black
+  // clear obstacles during black screen
   if (phaseManager.cinematicState === "cinematic_black" && obstacles.length > 0) {
     obstacles = [];
   }
@@ -182,7 +182,7 @@ function draw() {
     if (obstacles[i].isOffScreen()) obstacles.splice(i, 1);
   }
 
-  // ── Joueur ──────────────────────────────────────────────────────────────────
+  // ── Player ──────────────────────────────────────────────────────────────────
   if (!player.isDead) {
     player.update(isCinematic || isLocked);
     if (!isCinematic && !isLocked) {
@@ -191,7 +191,7 @@ function draw() {
   }
   player.display();
 
-  // ── Mort ────────────────────────────────────────────────────────────────────
+  // ── Death ────────────────────────────────────────────────────────────────────
   if (player.health <= 0 && !player.isDead) {
     player.isDead = true;
     if (!player.deathHandled) {
@@ -212,7 +212,7 @@ function draw() {
 
   phaseManager.update(player, world, transition, ui);
 
-  // overlay cinématique
+  // cinematic black overlay
   let alpha = phaseManager.getCinematicAlpha();
   if (alpha > 0) {
     noStroke();
@@ -291,23 +291,23 @@ function keyPressed() {
     return false;
   }
 
-  // M — toggle son (fonctionne dans tous les états)
+  // M — toggle mute (works in all states)
   if (key === "m" || key === "M") {
     isMuted = !isMuted;
     if (isMuted) {
-      if (musicPhase1 && musicPhase1.isLoaded())   musicPhase1.setVolume(0);
-      if (musicPhase2 && musicPhase2.isLoaded())   musicPhase2.setVolume(0);
-      if (musicPhase3 && musicPhase3.isLoaded())   musicPhase3.setVolume(0);
+      if (musicPhase1 && musicPhase1.isLoaded())       musicPhase1.setVolume(0);
+      if (musicPhase2 && musicPhase2.isLoaded())       musicPhase2.setVolume(0);
+      if (musicPhase3 && musicPhase3.isLoaded())       musicPhase3.setVolume(0);
       if (soundBreathing && soundBreathing.isLoaded()) soundBreathing.setVolume(0);
-      if (soundJump && soundJump.isLoaded())       soundJump.setVolume(0);
-      if (soundHurt && soundHurt.isLoaded())       soundHurt.setVolume(0);
+      if (soundJump && soundJump.isLoaded())           soundJump.setVolume(0);
+      if (soundHurt && soundHurt.isLoaded())           soundHurt.setVolume(0);
     } else {
-      if (musicPhase1 && musicPhase1.isLoaded())   musicPhase1.setVolume(1);
-      if (musicPhase2 && musicPhase2.isLoaded())   musicPhase2.setVolume(1);
-      if (musicPhase3 && musicPhase3.isLoaded())   musicPhase3.setVolume(1);
+      if (musicPhase1 && musicPhase1.isLoaded())       musicPhase1.setVolume(1);
+      if (musicPhase2 && musicPhase2.isLoaded())       musicPhase2.setVolume(1);
+      if (musicPhase3 && musicPhase3.isLoaded())       musicPhase3.setVolume(1);
       if (soundBreathing && soundBreathing.isLoaded()) soundBreathing.setVolume(1);
-      if (soundJump && soundJump.isLoaded())       soundJump.setVolume(1);
-      if (soundHurt && soundHurt.isLoaded())       soundHurt.setVolume(1);
+      if (soundJump && soundJump.isLoaded())           soundJump.setVolume(1);
+      if (soundHurt && soundHurt.isLoaded())           soundHurt.setVolume(1);
     }
     return false;
   }

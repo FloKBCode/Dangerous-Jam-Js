@@ -1,31 +1,31 @@
-// screens.js — écrans Start, Pause et Game Over — style CRT Arcade
+// screens.js — Start, Pause and Game Over screens — CRT Arcade style
 
-// Palette CRT saturée
+// Saturated CRT color palette
 const CRT_YELLOW  = [255, 240, 0];
 const CRT_RED     = [255, 30, 30];
 const CRT_GREEN   = [0, 255, 80];
 const CRT_CYAN    = [0, 220, 255];
-const CRT_WHITE   = [230, 240, 220]; // blanc légèrement teinté phosphore
+const CRT_WHITE   = [230, 240, 220]; // slightly phosphor-tinted white
 const CRT_GRAY    = [120, 140, 110];
 const CRT_PURPLE  = [200, 80, 255];
 const CRT_ORANGE  = [255, 140, 0];
 
-// Dessine un texte avec halo phosphore CRT
+// Draws text with a CRT phosphor glow halo
 function crtText(txt, x, y, sz, r, g, b, glowAlpha) {
   let ga = glowAlpha || 60;
   textSize(sz);
-  // halo
+  // glow halo
   fill(r, g, b, ga);
   text(txt, x + 2, y + 2);
   text(txt, x - 2, y - 2);
   text(txt, x + 2, y - 2);
   text(txt, x - 2, y + 2);
-  // texte principal
+  // main text
   fill(r, g, b);
   text(txt, x, y);
 }
 
-// Ligne horizontale style arcade (avec glow)
+// Horizontal arcade-style line (with glow)
 function crtLine(x1, y1, x2, y2, r, g, b) {
   stroke(r, g, b, 60);
   strokeWeight(3);
@@ -36,7 +36,7 @@ function crtLine(x1, y1, x2, y2, r, g, b) {
   noStroke();
 }
 
-// ── ÉCRAN DE DÉMARRAGE ────────────────────────────────────────────────────────
+// ── START SCREEN ──────────────────────────────────────────────────────────────
 class StartScreen {
   constructor() {
     this.timer = 0;
@@ -44,9 +44,9 @@ class StartScreen {
 
   draw() {
     this.timer++;
-    background(2, 4, 2); // noir quasi total, teinte phosphore
+    background(2, 4, 2); // near-black with phosphor tint
 
-    // grille de fond style arcade — lignes horizontales très subtiles
+    // arcade-style background grid — very subtle horizontal lines
     stroke(0, 40, 0, 40);
     strokeWeight(1);
     for (let y = 0; y < height; y += 16) {
@@ -54,7 +54,7 @@ class StartScreen {
     }
     noStroke();
 
-    // INSERT COIN clignotant en bas — style borne d'arcade
+    // blinking INSERT COIN at the bottom — classic arcade cabinet style
     if (this.timer % 60 < 40) {
       push();
       textFont("'Press Start 2P'");
@@ -64,7 +64,7 @@ class StartScreen {
       pop();
     }
 
-    // bandes colorées latérales style arcade
+    // colored side strips — arcade cabinet style
     noStroke();
     fill(...CRT_RED, 30);
     rect(0, 0, 6, height);
@@ -73,7 +73,7 @@ class StartScreen {
     rect(6, 0, 4, height);
     rect(width - 10, 0, 4, height);
 
-    // titre avec effet de pulsation + glow phosphore
+    // title with pulse animation + phosphor glow
     let pulse = 0.96 + sin(this.timer * 0.05) * 0.04;
     push();
     translate(width / 2, height / 2 - 80);
@@ -81,16 +81,16 @@ class StartScreen {
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
 
-    // ombre décalée rouge
+    // red shadow offset
     fill(...CRT_RED, 200);
     textSize(26);
     text("TRUST NO ONE", 3, 3);
 
-    // texte principal jaune phosphore
+    // main yellow phosphor text
     crtText("TRUST NO ONE", 0, 0, 26, ...CRT_YELLOW, 100);
     pop();
 
-    // sous-titre cyan
+    // cyan subtitle
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
@@ -98,12 +98,12 @@ class StartScreen {
       width / 2, height / 2 - 30, 6, ...CRT_CYAN, 50);
     pop();
 
-    // ligne séparatrice
+    // separator line
     crtLine(width / 2 - 180, height / 2 - 10,
             width / 2 + 180, height / 2 - 10,
             ...CRT_GREEN);
 
-    // PRESS ENTER clignotant — style arcade classique
+    // blinking PRESS ENTER — classic arcade style
     if (this.timer % 50 < 35) {
       push();
       textFont("'Press Start 2P'");
@@ -113,7 +113,7 @@ class StartScreen {
       pop();
     }
 
-    // contrôles en vert phosphore discret
+    // controls in subtle phosphor green
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
@@ -123,7 +123,7 @@ class StartScreen {
       width / 2, height / 2 + 75, 6, ...CRT_GREEN, 40);
     pop();
 
-    // coins décoratifs style borne d'arcade
+    // decorative corners — arcade cabinet style
     this._drawCorners();
   }
 
@@ -132,40 +132,40 @@ class StartScreen {
     stroke(...CRT_YELLOW, 180);
     strokeWeight(2);
     noFill();
-    // coin haut gauche
+    // top left corner
     line(10, 10, 10 + s, 10);
     line(10, 10, 10, 10 + s);
-    // coin haut droit
+    // top right corner
     line(width - 10 - s, 10, width - 10, 10);
     line(width - 10, 10, width - 10, 10 + s);
-    // coin bas gauche
+    // bottom left corner
     line(10, height - 10, 10 + s, height - 10);
     line(10, height - 10 - s, 10, height - 10);
-    // coin bas droit
+    // bottom right corner
     line(width - 10 - s, height - 10, width - 10, height - 10);
     line(width - 10, height - 10 - s, width - 10, height - 10);
     noStroke();
   }
 }
 
-// ── ÉCRAN DE PAUSE ─────────────────────────────────────────────────────────────
+// ── PAUSE SCREEN ──────────────────────────────────────────────────────────────
 class PauseScreen {
   draw(score, bestScore, phase) {
-    // overlay sombre semi-transparent
+    // dark semi-transparent overlay
     noStroke();
     fill(0, 0, 0, 200);
     rect(0, 0, width, height);
 
-    // panneau principal style terminal CRT
+    // main panel — CRT terminal style
     let pw = 620, ph = 270;
     let px = (width - pw) / 2, py = (height - ph) / 2;
 
-    // fond du panneau — vert très sombre
+    // panel background — very dark green
     fill(0, 8, 0, 240);
     noStroke();
     rect(px, py, pw, ph);
 
-    // bordure double style CRT
+    // double border — CRT style
     stroke(...CRT_GREEN, 200);
     strokeWeight(1);
     noFill();
@@ -174,17 +174,17 @@ class PauseScreen {
     rect(px + 3, py + 3, pw - 6, ph - 6);
     noStroke();
 
-    // titre ── PAUSED ──
+    // title -- PAUSED --
     push();
     textFont("'Press Start 2P'");
     textAlign(CENTER, CENTER);
     crtText("-- PAUSED --", width / 2, py + 28, 14, ...CRT_GREEN, 120);
     pop();
 
-    // ligne séparatrice
+    // separator line
     crtLine(px + 16, py + 50, px + pw - 16, py + 50, ...CRT_GREEN);
 
-    // ── Colonne gauche : scores ──────────────────────────────────────────────
+    // ── Left column: scores ──────────────────────────────────────────────────
     let c1x = px + 24, c1y = py + 68;
     push();
     textFont("'Press Start 2P'");
@@ -197,7 +197,7 @@ class PauseScreen {
     crtText(String(bestScore).padStart(6, "0"), c1x, c1y + 70, 11, ...CRT_GREEN, 90);
     pop();
 
-    // ── Colonne centre : phase + règles ──────────────────────────────────────
+    // ── Center column: phase + rules ──────────────────────────────────────────
     let c2x = width / 2, c2y = py + 68;
     push();
     textFont("'Press Start 2P'");
@@ -213,7 +213,7 @@ class PauseScreen {
     }
     pop();
 
-    // ── Colonne droite : contrôles ────────────────────────────────────────────
+    // ── Right column: controls ────────────────────────────────────────────────
     let c3x = px + pw - 24, c3y = py + 68;
     push();
     textFont("'Press Start 2P'");
@@ -225,7 +225,7 @@ class PauseScreen {
     crtText("R         RESTART", c3x, c3y + 66, 6, ...CRT_WHITE, 50);
     pop();
 
-    // ── Bas du panneau ─────────────────────────────────────────────────────────
+    // ── Panel bottom ──────────────────────────────────────────────────────────
     crtLine(px + 16, py + ph - 44, px + pw - 16, py + ph - 44, ...CRT_GREEN);
     push();
     textFont("'Press Start 2P'");
@@ -236,7 +236,7 @@ class PauseScreen {
   }
 }
 
-// Règles par phase avec couleurs CRT
+// Phase rules with CRT colors — displayed in the pause screen
 function _getPauseRules(phase) {
   if (phase === 1) {
     return [
@@ -259,7 +259,7 @@ function _getPauseRules(phase) {
   }
 }
 
-// ── ÉCRAN GAME OVER ────────────────────────────────────────────────────────────
+// ── GAME OVER SCREEN ──────────────────────────────────────────────────────────
 class GameOverScreen {
   constructor() {
     this.score      = 0;
@@ -294,22 +294,22 @@ class GameOverScreen {
   draw() {
     this.update();
     push();
-    background(0, 2, 0); // noir phosphore
+    background(0, 2, 0); // phosphor black
 
-    // scanlines sur le game over aussi
+    // scanlines on game over screen too
     noStroke();
     for (let y = 0; y < height; y += 2) {
       fill(0, 0, 0, 30);
       rect(0, y, width, 1);
     }
 
-    // teinte rouge si phase 3
+    // red tint if phase 3
     if (this.phase >= 3) {
       fill(40, 0, 0, 120);
       rect(0, 0, width, height);
     }
 
-    // spotlight image ou fallback
+    // spotlight image or fallback
     if (typeof spotlightImg !== "undefined" && spotlightImg) {
       let sw = 240, sh = 320;
       let sx = width / 2 - sw / 2;
@@ -318,7 +318,7 @@ class GameOverScreen {
       image(spotlightImg, sx, sy, sw, sh);
       noTint();
     } else {
-      // fallback : rayon lumineux style CRT
+      // fallback: CRT-style light beam
       push();
       let grad = drawingContext.createLinearGradient(
         width / 2, this.spotY - 140, width / 2, this.spotY + 60);
@@ -329,12 +329,12 @@ class GameOverScreen {
       pop();
     }
 
-    // sprite mort
+    // dead player sprite under the spotlight
     if (this.showCorpse) {
       if (typeof deadImg !== "undefined" && deadImg) {
         push();
         imageMode(CENTER);
-        // léger tint phosphore vert sur le cadavre
+        // slight green phosphor tint on the corpse
         tint(200, 255, 200, 220);
         image(deadImg, width / 2, height / 2 - 8, 48, 48);
         noTint();
@@ -350,13 +350,13 @@ class GameOverScreen {
       textAlign(CENTER, CENTER);
       noStroke();
 
-      // GAME OVER — style arcade rouge phosphore
+      // GAME OVER — red phosphor arcade style
       crtText("GAME  OVER", width / 2, height / 2 + 34, 20, ...CRT_RED, 120);
 
-      // séparateur
+      // separator
       crtLine(width / 2 - 130, height / 2 + 58, width / 2 + 130, height / 2 + 58, ...CRT_RED);
 
-      // stats style terminal
+      // stats in terminal style
       crtText("SCORE    " + String(this.score).padStart(6, "0"),
         width / 2, height / 2 + 74, 7, ...CRT_YELLOW, 60);
       crtText("DISTANCE " + this.distance + "m",
@@ -369,7 +369,7 @@ class GameOverScreen {
       pop();
     }
 
-    // prompt clignotant
+    // blinking restart prompt
     if (this.showPrompt) {
       push();
       textFont("'Press Start 2P'");
@@ -384,7 +384,7 @@ class GameOverScreen {
   }
 }
 
-// ── Label de phase ────────────────────────────────────────────────────────────
+// ── Phase label ────────────────────────────────────────────────────────────────
 let phaseLabelTimer = 0;
 let phaseLabelText  = "";
 
