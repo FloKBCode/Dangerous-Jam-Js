@@ -37,37 +37,38 @@ class Player {
     if (this.isOnGround && !this.isCrouching && !this.isDead) {
       this.frameTimer++;
       if (this.frameTimer >= 8) {
-        this.runFrame = this.runFrame === 0 ? 2 : 0;
+        this.runFrame = this.runFrame === 0 ? 1 : 0;
         this.frameTimer = 0;
       }
     }
   }
 
   display() {
-    if (this.isDead) {
-      push();
-      translate(this.x + 16, this.y + 16);
-      rotate(HALF_PI);
-      image(deadImg, -16, -16, 32, 32);
-      pop();
+  push();
+  // flip sprite horizontally — character faces right
+  scale(-1, 1);
+  translate(-this.x * 2 - this.width, 0);
 
-    } else if (this.isCrouching) {
-      image(spritesheet,
-        this.x, this.y, 32, 32,
-        1 * 25, 0 * 25, 24, 24
-      );
+  if (this.isDead) {
+    push();
+    translate(this.x + 16, this.y + 16);
+    rotate(HALF_PI);
+    image(deadImg, -16, -16, 32, 32);
+    pop();
 
-    } else if (!this.isOnGround) {
-      image(spritesheet,
-        this.x, this.y, 32, 32,
-        1 * 25, 0 * 25, 24, 24
-      );
+  } else if (this.isCrouching) {
+    image(spritesheet, this.x, this.y, 32, 32,
+      1 * 25, 0 * 25, 24, 24);
 
-    } else {
-      image(spritesheet,
-        this.x, this.y, 32, 32,
-        this.runFrame * 25, 0 * 25, 24, 24
-      );
-    }
+  } else if (!this.isOnGround) {
+    image(spritesheet, this.x, this.y, 32, 32,
+      1 * 25, 0 * 25, 24, 24);
+
+  } else {
+    image(spritesheet, this.x, this.y, 32, 32,
+      this.runFrame * 25, 0 * 25, 24, 24);
   }
+
+  pop();
+}
 }
