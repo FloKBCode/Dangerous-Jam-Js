@@ -3,7 +3,7 @@
 // ── global image variables ──────────────────────────────
 let spritesheet, deadImg;
 let tileSheet, characterSheet, diamondGood, diamondBad;
-let bgImg, sunImg, moonImg, hutImg;
+let bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg;
 let soundJump, soundHurt, soundTransition, soundBreathing;
 let musicPhase1, musicPhase2, musicPhase3;
 
@@ -30,7 +30,9 @@ function preload() {
   tileSheet       = loadImage('assets/sprites/obstacles/tilemap.png');
   diamondGood     = loadImage('assets/sprites/obstacles/diamond_good.png');
   diamondBad      = loadImage('assets/sprites/obstacles/diamond_bad.png');
-  bgImg           = loadImage('assets/backgrounds/backgroundColorForest.png');
+  bgImg  = loadImage('assets/backgrounds/backgroundColorForest.png');
+  bgImg2 = loadImage('assets/backgrounds/backgroundColorForest_phase2.png');
+  bgImg3 = loadImage('assets/backgrounds/backgroundColorForest_phase3.png');
   sunImg          = loadImage('assets/backgrounds/sun.png');
   moonImg         = loadImage('assets/backgrounds/moonFull.png');
   hutImg          = loadImage('assets/backgrounds/hut.png');
@@ -77,7 +79,7 @@ function draw() {
   }
 
   if (gameState === "paused") {
-    world.draw(phaseManager.currentPhase, bgImg, sunImg, moonImg, hutImg, tileSheet);
+    world.draw(phaseManager.currentPhase, bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg, tileSheet);
     player.display();
     ui.draw(player.health, tileSheet);
     pauseScreen.draw();
@@ -95,7 +97,7 @@ function draw() {
   let isCinematic = phaseManager.isCinematic();
 
   world.update(phase);
-  world.draw(phase, bgImg, sunImg, moonImg, hutImg, tileSheet);
+  world.draw(phase, bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg, tileSheet);
 
   if (!isCinematic) {
     spawnTimer++;
@@ -188,7 +190,7 @@ function keyPressed() {
     gameState = "playing";
   }
 
-  if (gameState === "playing" && key === "p" || key === "P") {
+  if (gameState === "playing" && (key === "p" || key === "P")) {
     gameState = "paused";
   }
 

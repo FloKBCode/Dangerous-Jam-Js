@@ -58,14 +58,14 @@ class World {
     return this.hutVisible && this.hutX <= playerX + 40;
   }
 
-  draw(phase, bgImg, sunImg, moonImg, hutImg, tileSheet) {
-    this._drawSky(phase);
-    this._drawBackground(phase, bgImg);
-    this._drawCelestialBody(phase, sunImg, moonImg);
-    this.clouds.forEach(c => this._drawCloud(c, phase));
-    if (this.hutVisible) this._drawHut(hutImg);
-    this._drawGround(phase, tileSheet);
-  }
+  draw(phase, bgImg, bgImg2, bgImg3, sunImg, moonImg, hutImg, tileSheet) {
+  this._drawSky(phase);
+  this._drawBackground(phase, bgImg, bgImg2, bgImg3);
+  this._drawCelestialBody(phase, sunImg, moonImg);
+  this.clouds.forEach(c => this._drawCloud(c, phase));
+  if (this.hutVisible) this._drawHut(hutImg);
+  this._drawGround(phase, tileSheet);
+}
 
   // sky — two flat rects instead of line-by-line for performance
   _drawSky(phase) {
@@ -90,16 +90,16 @@ class World {
   }
 
   // background forest with parallax and phase tint
-  _drawBackground(phase, bgImg) {
-    if (phase === 1)      tint(255);
-    else if (phase === 2) tint(60, 60, 120);
-    else                  tint(180, 30, 30);
+  _drawBackground(phase, bgImg, bgImg2, bgImg3) {
+  // no tint needed — each phase has its own pre-colored image
+  noTint();
 
-    let x = this.bgOffset % width;
-    image(bgImg, x, 0, width, this.groundY);
-    image(bgImg, x + width, 0, width, this.groundY);
-    noTint();
-  }
+  let img = phase === 1 ? bgImg : phase === 2 ? bgImg2 : bgImg3;
+
+  let x = this.bgOffset % width;
+  image(img, x, 0, width, this.groundY);
+  image(img, x + width, 0, width, this.groundY);
+}
 
   // sun phase 1 — moon phase 2 — red moon phase 3
   _drawCelestialBody(phase, sunImg, moonImg) {

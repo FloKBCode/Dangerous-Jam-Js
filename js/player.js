@@ -1,3 +1,4 @@
+// Player class — handles movement, jump, crouch, health and display
 class Player {
   constructor() {
     this.x       = 100;
