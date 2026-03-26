@@ -4,20 +4,29 @@ class PhaseManager {
   constructor() {
     this.currentPhase    = 1;
     this.distance        = 0;
+
+    // Phase 1 : 1800 frames
+    // Phase 2 : 3600 frames (2x phase 1), cabane 20 sec (1200f) avant la fin
     this.phase2Distance  = 1800;
+    this.phase2Duration  = 3600;
     this.phase3Triggered = false;
 
     // ── Machine à états ────────────────────────────────────────────────────────
     // "playing"         → jeu normal
-    // "pre_cinematic"   → 10 sec sans spawn, joueur LIBRE, obstacles sortent
-    // "wait_landing"    → attend que le joueur soit au sol avant de figer
-    // "cinematic_out"   → joueur FIGÉ + monde ralentit progressivement → 0
-    // "cinematic_black" → 5 sec d'animation (fond + machine à écrire)
-    // "cinematic_in"    → monde reprend vitesse, joueur déverrouillé
-    // "post_cinematic"  → 5 sec avant respawn des obstacles
+    // "pre_cinematic"   → spawn coupé, joueur LIBRE, obstacles sortent
+    //                     Phase 2 : 7 sec (420f) | Phase 3 : 20 sec (1200f)
+    // "slowdown"        → tout ralentit progressivement (joueur + décor)
+    // "wait_landing"    → attend isOnGround avant de figer
+    // "frozen"          → tout à l'arrêt, pause de 3 sec puis cinématique
+    // "cinematic_black" → animation narrative (5 sec)
+    // "cinematic_in"    → reprise progressive
+    // "post_cinematic"  → 5 sec avant respawn
     this.cinematicState = "playing";
     this.cinematicTimer = 0;
     this.pendingPhase   = 0;
+
+    // vitesse mémorisée avant le ralentissement (pour la reprise)
+    this.speedBeforeSlowdown = 0;
 
     // ── Machine à écrire ───────────────────────────────────────────────────────
     this.typewriterLines  = [];
@@ -25,7 +34,7 @@ class PhaseManager {
     this.typewriterIndex  = 0;
     this.typewriterChar   = 0;
     this.typewriterTimer  = 0;
-    this.typewriterSpeed  = 3;    // frames entre chaque lettre
+    this.typewriterSpeed  = 3;
     this.typewriterDone   = false;
     this.typewriterDoneAt = 0;
 
@@ -40,7 +49,7 @@ class PhaseManager {
       "SAFE."
     ];
 
-    // ── Animations cinématiques ────────────────────────────────────────────────
+    // ── Animations ────────────────────────────────────────────────────────────
     this.moonCinemaY     = 500;
     this.moonCinemaAlpha = 0;
     this.lightningTimer  = 0;
@@ -57,31 +66,35 @@ class PhaseManager {
 
     this.distance++;
 
-    // déclenchement phase 2 à 1800 frames de distance
+    // ── Déclenchement phase 2 ─────────────────────────────────────────────────
     if (this.currentPhase === 1 && this.distance >= this.phase2Distance) {
       this._startCinematic(2);
+      return;
     }
 
-    // cabane apparaît 900 frames avant la fin de phase 2
-    if (this.currentPhase === 2 &&
-        !world.hutVisible &&
-        this.distance >= this.phase2Distance + 900) {
-      world.showHut();
-    }
+    // ── Phase 2 en cours ──────────────────────────────────────────────────────
+    if (this.currentPhase === 2) {
+      let phase2Elapsed = this.distance - this.phase2Distance;
 
-    // déclenchement phase 3 quand la cabane touche le joueur
-    if (this.currentPhase === 2 &&
-        world.isHutReached(player.x) &&
-        !this.phase3Triggered) {
-      this.phase3Triggered = true;
-      this._startCinematic(3);
+      // cabane 20 sec (1200f) avant la fin de la phase 2
+      if (!world.hutVisible && phase2Elapsed >= this.phase2Duration - 1200) {
+        world.showHut();
+      }
+
+      // phase 3 quand le joueur atteint la cabane
+      if (world.isHutReached(player.x) && !this.phase3Triggered) {
+        this.phase3Triggered = true;
+        this._startCinematic(3);
+        return;
+      }
     }
   }
 
   _startCinematic(toPhase) {
-    this.cinematicState = "pre_cinematic";
-    this.cinematicTimer = 0;
-    this.pendingPhase   = toPhase;
+    this.cinematicState      = "pre_cinematic";
+    this.cinematicTimer      = 0;
+    this.pendingPhase        = toPhase;
+    this.speedBeforeSlowdown = 0; // sera capturé au début du slowdown
 
     // reset machine à écrire
     this.typewriterLines  = [];
@@ -105,40 +118,51 @@ class PhaseManager {
   _updateCinematic(player, world) {
     this.cinematicTimer++;
 
-    // ── PRE_CINEMATIC : 10 secondes (600 frames) ─────────────────────────────
-    // spawn coupé, joueur entièrement libre, obstacles sortent naturellement
+    // ── PRE_CINEMATIC ─────────────────────────────────────────────────────────
+    // Phase 2 : 7 sec (420f) | Phase 3 : 20 sec (1200f) — déjà géré dans update()
+    // Pendant ce temps : spawn coupé, joueur libre, obstacles sortent seuls
     if (this.cinematicState === "pre_cinematic") {
-      if (this.cinematicTimer >= 600) {
-        // passe en attente d'atterrissage
+      let duration = this.pendingPhase === 2 ? 420 : 1200;
+      if (this.cinematicTimer >= duration) {
+        // mémorise la vitesse actuelle
+        this.speedBeforeSlowdown = world.scrollSpeed;
+        this.cinematicState = "slowdown";
+        this.cinematicTimer = 0;
+      }
+    }
+
+    // ── SLOWDOWN : ralentissement progressif de tout (~3 sec = 180f) ──────────
+    // Le monde ralentit, le joueur aussi (ses frames de course ralentissent via scrollSpeed)
+    else if (this.cinematicState === "slowdown") {
+      // décélération douce sur 180 frames
+      world.scrollSpeed = max(0, world.scrollSpeed - (this.speedBeforeSlowdown / 180));
+
+      if (this.cinematicTimer >= 180) {
+        world.scrollSpeed = 0;
         this.cinematicState = "wait_landing";
         this.cinematicTimer = 0;
       }
     }
 
-    // ── WAIT_LANDING : attend que le joueur soit au sol ───────────────────────
-    // le joueur peut encore sauter librement
+    // ── WAIT_LANDING : attend que le joueur touche le sol ─────────────────────
     else if (this.cinematicState === "wait_landing") {
       if (player.isOnGround) {
         player.locked = true;
         if (this.pendingPhase === 3) {
-          // sprite debout devant la cabane (row 0, col 0 de tilemap-characters.png)
           player.cinematicSprite = { col: 0, row: 0 };
         }
-        this.cinematicState = "cinematic_out";
+        this.cinematicState = "frozen";
         this.cinematicTimer = 0;
       }
     }
 
-    // ── CINEMATIC_OUT : ralentissement progressif ─────────────────────────────
-    // joueur figé + monde ralentit sur ~120 frames (~2 sec) jusqu'à 0
-    else if (this.cinematicState === "cinematic_out") {
-      world.scrollSpeed = max(0, world.scrollSpeed - 0.04);
-
-      if (this.cinematicTimer >= 120) {
-        world.scrollSpeed = 0;
+    // ── FROZEN : tout à l'arrêt, pause de 3 sec (180f) ───────────────────────
+    else if (this.cinematicState === "frozen") {
+      // rien ne bouge — on attend 3 secondes
+      if (this.cinematicTimer >= 180) {
         this.currentPhase = this.pendingPhase;
 
-        // musique de la nouvelle phase
+        // musique
         if (this.pendingPhase === 2) {
           if (typeof soundTransition !== "undefined" && soundTransition.isLoaded()) soundTransition.play();
           if (typeof musicPhase1 !== "undefined") musicPhase1.stop();
@@ -157,7 +181,7 @@ class PhaseManager {
       }
     }
 
-    // ── CINEMATIC_BLACK : 5 secondes d'animation (300 frames) ────────────────
+    // ── CINEMATIC_BLACK : 5 sec d'animation (300f) ───────────────────────────
     else if (this.cinematicState === "cinematic_black") {
       this._updateTypewriter();
 
@@ -174,14 +198,13 @@ class PhaseManager {
         this.moonCinemaAlpha = min(255, this.moonCinemaAlpha + 2);
       }
 
-      // 300 frames minimum (5 sec), puis on attend la fin du texte
       if (this.cinematicTimer >= 300 && this.typewriterDone) {
         this.cinematicState = "cinematic_in";
         this.cinematicTimer = 0;
       }
     }
 
-    // ── CINEMATIC_IN : reprise progressive de la vitesse ─────────────────────
+    // ── CINEMATIC_IN : reprise progressive ────────────────────────────────────
     else if (this.cinematicState === "cinematic_in") {
       let targetSpeed = this.currentPhase === 2 ? SPEED_PHASE2 : SPEED_PHASE3_MIN;
       world.scrollSpeed = lerp(world.scrollSpeed, targetSpeed, 0.04);
@@ -195,7 +218,7 @@ class PhaseManager {
       }
     }
 
-    // ── POST_CINEMATIC : 5 secondes (300 frames) avant respawn ───────────────
+    // ── POST_CINEMATIC : 5 sec (300f) avant respawn ──────────────────────────
     else if (this.cinematicState === "post_cinematic") {
       if (this.cinematicTimer >= 300) {
         this.cinematicState = "playing";
@@ -204,16 +227,13 @@ class PhaseManager {
     }
   }
 
-  // Avance la machine à écrire lettre par lettre
   _updateTypewriter() {
     if (this.typewriterDone) return;
-
     this.typewriterTimer++;
     if (this.typewriterTimer < this.typewriterSpeed) return;
     this.typewriterTimer = 0;
 
     let currentLine = this.typewriterFull[this.typewriterIndex];
-
     if (this.typewriterLines.length <= this.typewriterIndex) {
       this.typewriterLines.push("");
     }
@@ -222,19 +242,16 @@ class PhaseManager {
       this.typewriterLines[this.typewriterIndex] += currentLine[this.typewriterChar];
       this.typewriterChar++;
     } else {
-      // pause de 40 frames entre les lignes
       this.typewriterTimer = -40;
       this.typewriterIndex++;
       this.typewriterChar = 0;
-
       if (this.typewriterIndex >= this.typewriterFull.length) {
-        this.typewriterDone  = true;
+        this.typewriterDone   = true;
         this.typewriterDoneAt = this.cinematicTimer;
       }
     }
   }
 
-  // Éclairs aléatoires (cinématique phase 3)
   _updateLightning() {
     this.lightningTimer++;
     if (this.lightningAlpha > 0) this.lightningAlpha -= 12;
@@ -243,7 +260,8 @@ class PhaseManager {
     }
   }
 
-  // ── Rendu cinématique ─────────────────────────────────────────────────────
+  // ── Rendu ─────────────────────────────────────────────────────────────────
+
   drawCinematic() {
     if (this.cinematicState !== "cinematic_black") return;
     if (this.pendingPhase === 2) this._drawCinematic2();
@@ -255,7 +273,6 @@ class PhaseManager {
     fill(10, 5, 40);
     rect(0, 0, width, height);
 
-    // étoiles
     randomSeed(42);
     fill(255, 255, 255, 180);
     noStroke();
@@ -264,7 +281,6 @@ class PhaseManager {
     }
     randomSeed();
 
-    // lune montante
     if (typeof moonImg !== "undefined") {
       tint(255, this.moonCinemaAlpha);
       image(moonImg, width / 2 - 40, this.moonCinemaY, 80, 80);
@@ -279,14 +295,12 @@ class PhaseManager {
     fill(30, 0, 0);
     rect(0, 0, width, height);
 
-    // vignette rouge
     for (let r = 0; r < 8; r++) {
       fill(120, 0, 0, 20 + r * 8);
       noStroke();
       rect(r * 10, r * 5, width - r * 20, height - r * 10, 4);
     }
 
-    // éclair
     if (this.lightningAlpha > 0) {
       noStroke();
       fill(255, 200, 200, this.lightningAlpha);
@@ -311,15 +325,12 @@ class PhaseManager {
     for (let i = 0; i < this.typewriterLines.length; i++) {
       let line = this.typewriterLines[i];
 
-      // ombre
       fill(0, 0, 0, 130);
       text(line, width / 2 + 2, startY + i * lineHeight + 2);
 
-      // texte
       fill(mainColor);
       text(line, width / 2, startY + i * lineHeight);
 
-      // curseur clignotant sur la ligne en cours
       if (i === this.typewriterIndex && !this.typewriterDone && frameCount % 30 < 15) {
         fill(cursorColor);
         text("_", width / 2 + textWidth(line) / 2 + 8, startY + i * lineHeight);
@@ -335,16 +346,19 @@ class PhaseManager {
   }
 
   getCinematicAlpha() {
-    if (this.cinematicState === "cinematic_out")   return map(this.cinematicTimer, 0, 120, 0, 255);
+    // fondu progressif pendant slowdown
+    if (this.cinematicState === "slowdown")        return map(this.cinematicTimer, 0, 180, 0, 180);
+    if (this.cinematicState === "wait_landing")    return 180;
+    if (this.cinematicState === "frozen")          return map(this.cinematicTimer, 0, 180, 180, 255);
     if (this.cinematicState === "cinematic_black") return 255;
     if (this.cinematicState === "cinematic_in")    return map(this.cinematicTimer, 0, 100, 255, 0);
     return 0;
   }
 
-  // true quand le joueur ne doit plus recevoir les inputs
   isCinematic() {
-    return this.cinematicState === "cinematic_out"   ||
-           this.cinematicState === "cinematic_black" ||
+    // inputs bloqués pendant ces états
+    return this.cinematicState === "frozen"         ||
+           this.cinematicState === "cinematic_black"||
            this.cinematicState === "cinematic_in";
   }
 
