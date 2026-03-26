@@ -75,13 +75,13 @@ class Obstacle {
     }
   }
 
-  // Alternance sprite face (row10,col7) / profil (row7,col11)
+  // Alternance sprite face (row7,col11) / profil (row7,col11)
   _drawCoin(tileSheet) {
     push();
     if (this.coinPhase === 0 || this.coinPhase === 1) {
-      image(tileSheet, this.x, this.y, 18, 18, 7 * 19, 10 * 19, 18, 18);
-    } else {
       image(tileSheet, this.x, this.y, 18, 18, 11 * 19, 7 * 19, 18, 18);
+    } else {
+      image(tileSheet, this.x, this.y, 18, 18, 12 * 19, 7 * 19, 18, 18);
     }
     pop();
   }
