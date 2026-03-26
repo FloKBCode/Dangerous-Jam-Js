@@ -73,17 +73,11 @@ class PhaseManager {
     }
 
     // ── Phase 2 en cours ──────────────────────────────────────────────────────
+    // La phase 3 se déclenche par distance (phase2Distance + phase2Duration)
+    // La cabane est spawnée au début du slowdown au bon endroit — pas ici
     if (this.currentPhase === 2) {
       let phase2Elapsed = this.distance - this.phase2Distance;
-
-      // cabane 20 sec (1200f) avant la fin de la phase 2
-      if (!world.hutVisible && phase2Elapsed >= this.phase2Duration - 1200) {
-        world.showHut();
-      }
-
-      // phase 3 quand le joueur atteint la cabane
-      if (world.isHutReached(player.x) && !this.phase3Triggered) {
-        this.phase3Triggered = true;
+      if (phase2Elapsed >= this.phase2Duration) {
         this._startCinematic(3);
         return;
       }
@@ -134,6 +128,16 @@ class PhaseManager {
     // ── SLOWDOWN : ralentissement progressif de tout (~3 sec = 180f) ──────────
     // Le monde ralentit, le joueur aussi (ses frames de course ralentissent via scrollSpeed)
     else if (this.cinematicState === "slowdown") {
+      // première frame du slowdown : spawn la cabane au bon endroit pour phase 3
+      // Calcul : pendant 180f de décélération de vitesse V à 0, distance = V/2 * 180
+      // La cabane doit s'arrêter à playerX(100) + 60px = 160
+      // Donc hutX initial = 160 + distance_slowdown = 160 + (speedBeforeSlowdown/2)*180
+      if (this.pendingPhase === 3 && this.cinematicTimer === 1) {
+        let distSlowdown = (this.speedBeforeSlowdown / 2) * 180;
+        world.hutX       = 160 + distSlowdown;
+        world.hutVisible = true;
+      }
+
       // décélération douce sur 180 frames
       world.scrollSpeed = max(0, world.scrollSpeed - (this.speedBeforeSlowdown / 180));
 
