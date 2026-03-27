@@ -75,4 +75,4 @@ js/ui.js — user interface
 - Mariame — Documentation
 
 ## Play Online
-[**Play TRUST NO ONE on itch.io**]https://itch.io/https://flokbcode.itch.io/trust-no-one
+[**Play TRUST NO ONE on itch.io**](https://flokbcode.itch.io/trust-no-one)
